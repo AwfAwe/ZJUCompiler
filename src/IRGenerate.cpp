@@ -17,15 +17,73 @@ bool operator==(struct InterCode code1, struct InterCode code2) {
               code1.addr3->value == code2.addr3->value)));
 }
 
+void generate_declarator_pointer(TreeNode *cur1,TreeNode *cur2){
+    //尚未实现多重修饰符
+    Addr dest = new Addr_(POINT,cur1->child[0]->child[0]->value);
+    InterCode code(POINTDEC,dest);
+    IRCodes.insert(code);
+}
+
+void generate_declarator(TreeNode *cur){
+    //direct_declarator->ID
+    if(cur->child.size() == 1){
+        Addr dest = new Addr_(VARIABLE,cur->child[0]->value);
+        InterCode code(DECVARIABLE,dest);
+        IRCodes.insert(code);
+    }
+    //direct_declarator->direct_declarator '[' NUM ']'
+    else{  //多维数组尚未处理
+        Addr dest = new Addr_(ARRAY, cur->child[1]->value,atoi(cur->child[2]->value.c_str()));
+        InterCode code(DECARRAY,dest);
+        IRCodes.insert(code);
+    }
+}
+
+void generate_direct_declarator(TreeNode *cur){
+    //declarator->direct_declarator
+    if(cur->child.size() == 1){
+        generate_declarator(cur->child[0]);
+    }
+    //declarator->pointer direct_declarator
+    else{
+        generate_declarator_pointer(cur->child[0],cur->child[1]);
+    }
+}
+
+void generate_assign_declarator(TreeNode *cur1,TreeNode *cur2){
+    Addr dest = new Addr_(VARIABLEINIT,cur1->child[0]->value,cur2->child[0]->value);
+    InterCode code(DECVARIABLE,dest);
+    IRCodes.insert(code);
+}
+
+void generate_val_declarator(TreeNode *cur){
+    //init_declarator->declarator
+    if(cur->child.size() == 1){
+       generate_direct_declarator(cur->child[0]);
+    }
+    //init_declarator->declarator PURE_ASSIGN initializer
+    else{
+       generate_assign_declarator(cur->child[0],cur->child[2]);
+    }
+}
 //变量声明，声明数组后需要分配内存空间
 //其他类型变量不需要额外生成三地址码
-void generate_val_dec(TreeNode *cur) {
+void generate_val(TreeNode *cur) {
+    // if (cur->child.size() == 2) {
+    //     Addr dest = new Addr_(ARRAY, cur->child[1]->value,
+    //                           atoi(cur->child[2]->value.c_str()));
+    //     InterCode code(DEC, dest);
+    //     IRCodes.insert(code);
+    // }
     //declaration-> type_specifier init_declarator_list ';'
-    if (cur->child.size() == 2) {
-        Addr dest = new Addr_(ARRAY, cur->child[1]->value,
-                              atoi(cur->child[2]->value.c_str()));
-        InterCode code(DEC, dest);
-        IRCodes.insert(code);
+    //init_declarator_list->init_declarator_list ',' init_declarator
+    if(cur->child[1]->child.size() == 2){
+       generate_val(cur->child[1]->child[0]);
+       generate_val_declarator(cur->child[1]->child[1]);
+    }
+    //init_declarator_list->init_declarator
+    else{   
+       generate_val_declarator(cur->child[1]->child[0]);
     }
 }
 
@@ -275,7 +333,7 @@ void generate_param(TreeNode *cur) {
     //parameter_declaration -> type_specifier declarator
     if(cur->value == "parameter_declarations"){
         Addr dest;
-        if (cur->value == "param_array")
+        if (cur->child[1]->child[0]->child.size() == 1)
             dest = new Addr_(ARRAY, cur->child[1]->value);
         else
             dest = new Addr_(VARIABLE, cur->child[1]->value);
@@ -284,10 +342,12 @@ void generate_param(TreeNode *cur) {
     }
     else{ //parameter_declaration -> type_specifier declarator PURE_ASSIGN initializer
         Addr dest;
-        if (cur->value == "param_array")
-            dest = new Addr_(ARRAYINIT, cur->child[1]->value,cur->child[2]->value,cur->child[3]->value);
-        else
-            dest = new Addr_(VARIABLEINIT, cur->child[1]->value,cur->child[2]->value,cur->child[3]->value);
+        if (cur->child[1]->child[0]->child.size() == 1){
+            // dest = new Addr_(ARRAYINIT, cur->child[1]->value,cur->child[3]->value);
+        }
+        else{
+            // dest = new Addr_(VARIABLEINIT, cur->child[1]->value,cur->child[3]->value);
+        }
         InterCode code(PARAM, dest);
         IRCodes.insert(code);
     }
@@ -309,7 +369,7 @@ void generate_params(TreeNode *cur) {
     //     ;
     // else
     //     generate_param_list(cur->child[0]);
-    if(cur->child.size == 0)     //parameter_list_opt-> 
+    if(cur->child.size() == 0)     //parameter_list_opt-> 
       ;
     else      //parameter_list_opt->parameter_list
       generate_param_list(cur->child[0]);
@@ -317,16 +377,20 @@ void generate_params(TreeNode *cur) {
 
 void generate_func(TreeNode *cur) {  //包括函数指针和普通函数
     //function_definition->declarator(1)->direct_declarator
-    if(cur->child[1]->child.size == 1)  //ID(declartor)
-       Addr dest = new Addr_(STRING, cur->child[1]->value); 
+    if(cur->child[1]->child.size() == 1){  //ID(declartor)
+       Addr dest = new Addr_(STRING, cur->child[1]->value);        
+       InterCode code(OpKind::FUNC, dest);
+       IRCodes.insert(code);
+       generate_params(cur->child[2]);  //parameter_list_opt
+    }
     //function_definition->declarator(1)->pointer(0) direct_declarator
     else{                               //ID(pointer declartor)
        Addr dest = new Addr_(STRING, "*"+cur->child[1]->child[0]->child[1]->child[0]->value+" "+cur->child[1]->value);
+       InterCode code(OpKind::FUNC, dest);
+       IRCodes.insert(code);
+       generate_params(cur->child[2]);  //parameter_list_opt
     }                               
-       
-    InterCode code(OpKind::FUNC, dest);
-    IRCodes.insert(code);
-    generate_params(cur->child[2]);  //parameter_list_opt
+
 }
 
 void GenerateIR(SyntaxTree cur) {
@@ -335,7 +399,7 @@ void GenerateIR(SyntaxTree cur) {
     if (cur->value == "function_declaration")
         generate_func(cur);
     else if (cur->value == "declaration")
-        generate_val_dec(cur);
+        generate_val(cur);
     else if (cur->value == "statement_list")
         if (!cur->attr.isdone)
             generate_statement_list(cur);

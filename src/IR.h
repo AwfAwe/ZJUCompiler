@@ -72,7 +72,8 @@ enum OpKind {
     READ,
     WRITE,
     RET,
-    DEC,
+    DECARRAY,
+    DECVARIABLE,
     LEQ,
     L,
     G,
@@ -257,13 +258,16 @@ class IRCode {
                         else if(node->code.addr1->kind == VARIABLE)
                             IRcode = "PARAM " + str_addr(node->code.addr1);
                         else if(node->code.addr1->kind == ARRAYINIT)
-                            IRcode = "PARAM *" + str_addr(node->code.addr1) + str_addr(node->code.addr2) + str_addr(node->code.addr3);
+                            IRcode = "PARAM *" + str_addr(node->code.addr1) + '=' + str_addr(node->code.addr3);
                         else if(node->code.addr1->kind == VARIABLEINIT)
-                            IRcode = "PARAM " + str_addr(node->code.addr1) + str_addr(node->code.addr2) + str_addr(node->code.addr3);
+                            IRcode = "PARAM " + str_addr(node->code.addr1) + '=' + str_addr(node->code.addr3);
                         if(is_skip == false)
                         {
                             targetCodes.asm_function_parameter(str_addr(node->code.addr1));
                         }
+                        break;
+                    case POINT:
+                        IRcode = "DEC *" + str_addr(node->code.addr1);
                         break;
                     case ADDR:
                         IRcode = str_addr(node->code.addr1) + " = &" + str_addr(node->code.addr2);
@@ -307,8 +311,12 @@ class IRCode {
                             }															
                         }
                         break;
-                    case DEC:
+                    case DECARRAY:
                         IRcode = "DEC " + node->code.addr1->name + "[" + to_string(node->code.addr1->value) + "]";
+                        targetCodes.asm_declaration(str_addr(node->code.addr1));
+                        break;
+                    case DECVARIABLE:
+                        IRcode = "DEC" + node->code.addr1->name;
                         targetCodes.asm_declaration(str_addr(node->code.addr1));
                         break;
                     case LEQ:
