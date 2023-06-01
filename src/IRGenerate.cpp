@@ -4,7 +4,6 @@ extern IRCode IRCodes;
 int Addr_::temp = 0;
 
 int label = 1;
-int flag = 0;
 
 string new_label() { return "label_" + to_string(label++); }
 
@@ -97,356 +96,527 @@ Addr generate_val(TreeNode *cur){
     return generate_val_list(cur->child[0]->child[0]->value,cur->child[1]);
 }
 
-Addr generate_cast(TreeNode *cur){
-    if(cur->child.size() == 1){
-        cout<<"*->unary"<<endl;
-        return generate_unary(cur);
-    }
-}
-
-Addr generate_mul(TreeNode *cur){
-    if(cur->child.size() == 1){
-        cout<<"*->->"<<endl;
-        return generate_cast(cur);
-    }
-}
-
-Addr generate_add(TreeNode *cur){
-    if(cur->child.size() == 1){
-        cout<<"+->*"<<endl;
-        return generate_mul(cur);
-    }
-}
-
-Addr generate_shift_expression(TreeNode *cur){
-    if(cur->child.size() == 1){
-        cout<<"shift->add"<<endl;
-        return generate_add(cur);
-    }
-}
-
-Addr generate_relational_expression(TreeNode *cur){
-    if(cur->child.size() == 1){
-        cout<<"relational->shift"<<endl;
-        return generate_shift_expression(cur);
-    }
-    else if(cur->value == "relational_expression_lt"){
-        cout<<"relational_expression lt shift_expression"<<endl;
-        // generate_tri_relational_lt_expression(cur);
-    }
-    else if(cur->value == "relational_expression_lt"){
-        cout<<"relational_expression gt shift_expression"<<endl;
-        // generate_tri_relational_gt_expression(cur);
-    }
-    else if(cur->value == "relational_expression_lt"){
-        cout<<"relational_expression le shift_expression"<<endl;
-        // generate_tri_relational_le_expression(cur);
-    }
-    else if(cur->value == "relational_expression_lt"){
-        cout<<"relational_expression ge shift_expression"<<endl;
-        // generate_tri_relational_ge_expression(cur);
-    }
-}
-
-Addr generate_equality_expression(TreeNode *cur){
-    cout<<"equality       "<<cur->value<<endl;
-    if(cur->value == "equlity_expression_eq"){
-        cout<<"equality_expression EQUAL relational_expression"<<endl;
-        // return generate_tri_equality_expression(cur);
-    }
-    else if(cur->value == "equlity_expression_ne"){
-        cout<<"equality_expression NOTEQUAL relational_expression"<<endl;
-        // generate_tri_notequality_expression(cur);
-    }
-    else{
-        cout<<"=->relational"<<endl;
-        return generate_relational_expression(cur);
-    }
-}
-
-Addr generate_tri_equality_expression(TreeNode *cur){
-    Addr dest1 = generate_equality_expression(cur->child[0]);
-    Addr dest2 = generate_relational_expression(cur->child[2]);
-    cout<<"equal:"<<cur->child[0]->value<<"  "<<cur->child[2]->value<<endl;
-}
-
-Addr generate_and_expression(TreeNode *cur){
-    if(cur->child.size() == 1){
-        cout<<"and->="<<endl;
-        return generate_equality_expression(cur);
-    }
-    else{
-        cout<<"and_expression '&' equality_expression"<<endl;
-        // generate_tri_and_expression(cur);
-    }
-}
-
-Addr generate_logical_exclusive_or_expression(TreeNode *cur){
-    if(cur->child.size() == 1){
-        cout<<"exclusive_or->and"<<endl;
-        return generate_and_expression(cur);
-    }
-    else{
-        cout<<"exclusive_or_expression '^' and_expression"<<endl;
-        // generate_tri_exclusive_or_expression(cur);
-    }
-}
-
-Addr generate_logical_inclusive_or_expression(TreeNode *cur){
-    if(cur->child.size() == 1){
-        cout<<"inclusive or->exclusive_or"<<endl;
-        return generate_logical_exclusive_or_expression(cur);
-    }
-    else{
-        cout<<"inclusive_or_expression '|' exclusive_or_expression"<<endl;
-        // generate_tri_inclusive_or_expression(cur);
-    }
-}
-
-Addr generate_logical_and_expression(TreeNode *cur){
-    if(cur->child.size() == 1){
-        cout<<"and->inclusive or"<<endl;
-        return generate_logical_inclusive_or_expression(cur);
-    }
-    else{
-        cout<<"logical_and_expression AND inclusive_or_expression"<<endl;
-        // generate_tri_and_expression(cur);
-    }
-}
-
-Addr generate_logical_or_expression(TreeNode *cur){
-    if(cur->child.size() == 1){
-        cout<<"or->and"<<endl;
-        return generate_logical_and_expression(cur);
-    }
-    else{
-        cout<<"logical_or_expression OR logical_and_expression"<<endl;
-        // generate_tri_or_expression(cur);
-    }
-}
-
-//简单表达式生成
-Addr generate_conditional(TreeNode *cur) {
-    Addr dest = new Addr_;
-    // cout<<cur->value<<endl;
-    if(cur->child.size() == 1){
-        cout<<"conditional->logical_or_exoression"<<endl;
-        return generate_logical_or_expression(cur);
-    }
-    else{
-        cout<<"conditional->logical_or_expression '?' assignment_expression ':' conditional_expression"<<endl;
-        // return generate_tri_conditional(cur);
-    }
-}
-
-Addr generate_primary(TreeNode *cur){
-    cout<<"primary:"<<cur->value<<endl;
-    Addr dest;
-    if(cur->value == "primary_expression_id"){
-        dest = new Addr_(VARIABLE,cur->child[0]->value);
-        return dest;
-    }
-    else if(cur->value == "primary_expression_constantInt"){
-        dest = new Addr_(CONSTANT,cur->child[0]->value);
-        return dest;
-    }
-    else if(cur->value == "primary_expression_constantChar"){
-        dest = new Addr_(CONSTANT,cur->child[0]->value);
-        return dest;
-    }
-    else if(cur->value == "primary_expression_brace"){
-        dest = new Addr_(BRACEEXP,cur->child[0]->value);
-        return dest;
-    }
-}
-
-Addr generate_postfix(TreeNode *cur){
-    if(cur->child.size() == 1){
-        cout<<"postfix->primary"<<endl;
-        return generate_primary(cur);
-    }
-    else{
-
-    }
-}
-
-Addr generate_unary(TreeNode *cur){
-    cout<<cur->child.size()<<endl;
-    if(cur->child.size() == 1){
-        cout<<"unary->postfix:"<<cur->value<<endl;
-        return generate_postfix(cur);
-    }
-    else {
-     if(cur->child[0]->value == "unary_expression_inc"){
-        cout<<"unary->++"<<endl;
-        Addr dest = generate_unary(cur->child[1]);
-        Addr res;
-        cout<<dest->name<<endl;
-        string temp = "++" + dest->name;
-        res = new Addr_(POSTFIX,temp);
-        return res;
-     }
-     else if(cur->child[0]->value == "unary_expression_dec"){
-        // Addr dest = generate_unary(cur->child[1]);
-        // Addr res;
-        // cout<<"unary->--"<<endl;
-        // InterCode code(POSTFIXDEC,dest);
-        // IRCodes.insert(code);
-     }    
-    //  else if(cur->child[0]->value == "unary_expression_unary"){
-    //     cout<<"unary-> ->"<<endl;
-    //     InterCode code(POSTFIXUNARY,dest);
-    //  }
-    }
-}
-
 Addr generate_assignment_operator(TreeNode *cur){
     if(cur->value == "assignment_operator_assign"){
-        Addr dest = new Addr_(OP,"EQ");
+        Addr dest = new Addr_(OP,"PURE_ASSIGN");
         return dest;
     }
     else if(cur->value == "assignment_operator_add"){
-        Addr dest = new Addr_(OP,"ADD");
+        Addr dest = new Addr_(OP,"ADD_ASSIGN");
         return dest;
     }
     else if(cur->value == "assignment_operator_sub"){
-        Addr dest = new Addr_(OP,"SUB");
+        Addr dest = new Addr_(OP,"SUB_ASSIGN");
         return dest;
     }
         else if(cur->value == "assignment_operator_mul"){
-        Addr dest = new Addr_(OP,"MUL");
+        Addr dest = new Addr_(OP,"MUL_ASSIGN");
         return dest;
     }
         else if(cur->value == "assignment_operator_div"){
-        Addr dest = new Addr_(OP,"DIV");
+        Addr dest = new Addr_(OP,"DIV_ASSIGN");
         return dest;
     }
         else if(cur->value == "assignment_operator_mod"){
-        Addr dest = new Addr_(OP,"MOD");
+        Addr dest = new Addr_(OP,"MOD_ASSIGN");
         return dest;
     }
         else if(cur->value == "assignment_operator_left"){
-        Addr dest = new Addr_(OP,"LEFT");
+        Addr dest = new Addr_(OP,"LEFT_ASSIGN");
         return dest;
     }
         else if(cur->value == "assignment_operator_right"){
-        Addr dest = new Addr_(OP,"RIGHT");
+        Addr dest = new Addr_(OP,"RIGHT_ASSIGN");
         return dest;
     }
         else if(cur->value == "assignment_operator_and"){
-        Addr dest = new Addr_(OP,"AND");
+        Addr dest = new Addr_(OP,"AND_ASSIGN");
         return dest;
     }
         else if(cur->value == "assignment_operator_xor"){
-        Addr dest = new Addr_(OP,"XOR");
+        Addr dest = new Addr_(OP,"XOR_ASSIGN");
         return dest;
     }
         else if(cur->value == "assignment_operator_or"){
-        Addr dest = new Addr_(OP,"OR");
+        Addr dest = new Addr_(OP,"OR_ASSIGN");
         return dest;
     }
 }
 
-//表达式
-Addr generate_assignment(TreeNode *cur) {
-    cout<<cur->value<<endl;
-    if (cur->child.size() == 3) {
-        cout<<"assignment->assignment->unary_expression assignment_operator assignment_expression"<<endl;
-        Addr unary = generate_unary(cur->child[0]);
-        cout<<"op"<<endl;
-        Addr op = generate_assignment_operator(cur->child[1]);
-        Addr ass = generate_assignment(cur->child[2]);
-        cout<<unary->name<<" "<<op->name<<" "<<ass->name<<endl;
-        InterCode code(ASSIGNMENT,unary,op,ass);
-        IRCodes.insert(code);
-    } else {
-        return generate_conditional(cur);
+
+void generate_arg(TreeNode *cur) {
+    Addr a1 = generate_exp(cur);
+    InterCode code(OpKind::ARG, a1);
+    IRCodes.insert(code);
+}
+
+void generate_arg_list(TreeNode *cur) {
+    if (cur->child.size() == 1){
+        generate_arg(cur->child[0]);
+    }
+    else {  
+        cout<<"parameter_list ',' parameter_declaration"<<endl;
+        generate_arg_list(cur->child[0]);
+        generate_arg(cur->child[1]);
     }
 }
 
-Addr generate_exp_stmt(TreeNode *cur) {
-    if (cur->child.size() == 1){
-        cout<<"expression->assignment"<<endl;
-        return generate_assignment(cur->child[0]);
+void generate_args(TreeNode *cur){
+    if(cur->child.size() == 0)     {
+    //   cout<<"parameter_list_opt-> "<<endl;
+      Addr dest = new Addr_(STRING,"empty");
+      InterCode code(OpKind::EMPTYARG,dest);
+      IRCodes.insert(code);
     }
-    else{
-        cout<<"expression->;"<<endl;
-        ;
+    else {
+    //   cout<<"parameter_list_opt->parameter_list"<<endl;
+      generate_arg_list(cur->child[0]);
+      Addr dest = new Addr_(STRING,"arg_end");
+      InterCode code(OpKind::ARGEND,dest);
+      IRCodes.insert(code);
+    }   
+}
+
+Addr generate_lv(TreeNode *cur){
+    Addr a1, a2, a3;
+    if(cur->child.size()>1){
+        a2 = generate_exp(cur->child[1]);
+        a1 = generate_exp(cur->child[0]);
+        a3 = new Addr_(a1->name+'['+a2->name+']');
     }
+
+}
+
+Addr generate_exp(TreeNode *cur){
+    Addr a1, a2, a3;
+    if(cur->value == "assignment_expression"){
+        a1 = generate_lv(cur->child[0]);
+        a2 = generate_assignment_operator(cur->child[1]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(ASSIGNMENT, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1;
+    }
+    else if(cur->value == "conditional_expression"){
+        //toDO
+        a1 = generate_exp(cur->child[0]);
+        a2 = generate_exp(cur->child[1]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(ASSIGNMENT, a1, a2, a3);
+        IRCodes.insert(code);
+        return a2;
+    }
+    else if(cur->value == "logical_or_expression"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(OR, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1;       
+    }
+    else if(cur->value == "logical_and_expression"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(AND, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1;       
+    }
+    else if(cur->value == "inclusive_or_expression"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(BITOR, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1;         
+    }
+    else if(cur->value == "exclusive_or_expression"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(BITXOR, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1;
+    }
+    else if(cur->value == "and_expression"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(BITAND, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1;
+    }
+    else if(cur->value == "equality_expression_eq"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(EQ, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1;        
+    }else if(cur->value == "equality_expression_ne"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(NE, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1;        
+    }
+    else if(cur->value == "relational_expression_lt"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(LT, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1;         
+    }
+    else if(cur->value == "relational_expression_gt"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(GT, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1; 
+    }
+    else if(cur->value == "relational_expression_le"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(LE, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1; 
+    }
+    else if(cur->value == "relational_expression_ge"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(GE, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1; 
+    }
+    else if(cur->value == "shift_expression_left"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(LEFT, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1;         
+    }
+    else if(cur->value == "shift_expression_right"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(RIGHT, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1; 
+    }
+    else if(cur->value == "additive_expression_add"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(ADD, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1; 
+    }
+    else if(cur->value == "additive_expression_sub"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(SUB, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1; 
+    }
+    else if(cur->value == "multiplicative_expression_mul"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(MUL, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1; 
+    }
+    else if(cur->value == "multiplicative_expression_div"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[2]);
+        InterCode code(DIV, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1; 
+    }
+    else if(cur->value == "cast_expression"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[1]);
+        enum OpKind ty;
+        if(cur->child[0]->child[0]->value=="INT")ty=TOINT;
+        if(cur->child[0]->child[0]->value=="CHAR")ty=TOCHAR;
+        if(cur->child[0]->child[0]->value=="FLOAT")ty=TOFLOAT;
+        InterCode code(ty,a1,a2);
+        IRCodes.insert(code);
+        return a1;
+    }
+    else if(cur->value == "unary_expression_inc"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[1]);
+        InterCode code(PREINC,a1,a2);
+        IRCodes.insert(code);
+        return a1;       
+    }
+    else if(cur->value == "unary_expression_dec"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[1]);
+        InterCode code(PREDEC,a1,a2);
+        IRCodes.insert(code);
+        return a1;  
+    }
+    else if(cur->value == "unary_expression_unary"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[1]);
+        enum OpKind ty;
+        if(cur->child[0]->value=="unary_operator_addr")ty=GETADDR;
+        if(cur->child[0]->value=="unary_operator_ptr")ty=PTR;
+        if(cur->child[0]->value=="unary_operator_pos")ty=POS;
+        if(cur->child[0]->value=="unary_operator_neg")ty=NEG;
+        if(cur->child[0]->value=="unary_operator_bitneg")ty=BITNEG;
+        if(cur->child[0]->value=="unary_operator_not")ty=NOT;
+        InterCode code(ty,a1,a2);
+        IRCodes.insert(code);
+        return a1;        
+    }
+    else if(cur->value == "postfix_expression_array"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        a3 = generate_exp(cur->child[1]);
+        InterCode code(VISITARRAY, a1, a2, a3);
+        IRCodes.insert(code);
+        return a1;         
+    }
+    else if(cur->value == "postfix_expression_call"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        InterCode code(VISITARRAY, a1, a2, a3);
+        IRCodes.insert(code);
+        generate_args(cur->child[1]);
+
+        return a1;        
+    }
+    else if(cur->value == "postfix_expression_struct"){
+
+    }
+    else if(cur->value == "postfix_expression_arrow"){
+
+    }
+    else if(cur->value == "postfix_expression_inc"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        InterCode code(POSTINC,a1,a2);
+        IRCodes.insert(code);
+        return a1;    
+    }
+    else if(cur->value == "postfix_expression_dec"){
+        a1 = new Addr_();
+        a2 = generate_exp(cur->child[0]);
+        InterCode code(POSTDEC,a1,a2);
+        IRCodes.insert(code);
+        return a1;    
+    }
+    else if(cur->value == "primary_expression_id"){
+        a1 = new Addr_(cur->child[0]->value);
+        return a1;
+    }
+    else if(cur->value == "primary_expression_constantInt"){
+        a1 = new Addr_(cur->child[0]->value, cur->child[0]->attr.numval);
+    }
+    else if(cur->value == "primary_expression_constantChar"){
+        a1 = new Addr_(cur->child[0]->value);
+    }
+    else if(cur->value == "primary_expression_brace"){
+        a1 = generate_exp(cur->child[0]);
+        return a1;
+    }
+
 }
 
 Addr generate_ret_stmt(TreeNode *cur){
-        Addr dest = generate_exp_stmt(cur->child[1]);
+    if(cur->child[1]->child.size()==1){
+        Addr dest = generate_exp(cur->child[1]->child[0]);
         InterCode code(RET, dest);
         cout<<"ret:"<<dest->name<<endl;
         IRCodes.insert(code);
-        // flag = 0;
+    }else{
+        Addr dest = new Addr_(EMPTY);
+        InterCode code(RET, dest);
+        cout<<"ret:"<<endl;
+        IRCodes.insert(code);
+    }
 }
 
 Addr generate_if_stmt(TreeNode *cur){
     if(cur->child.size() == 3){
         cout<<"if then"<<endl;
         Addr label1 = new Addr_(AddrKind::LAB, new_label());
-
-        cout<<label1<<endl;
-        Addr ass = generate_equality_expression(cur->child[1]);
-
-        cout<<"flag1"<<endl;
-        Addr state = generate_statement(cur->child[2]);
-
-        cout<<"flag2"<<endl;
-        InterCode code2(LABEL,label1);
+        Addr label2 = new Addr_(AddrKind::LAB, new_label());
+        Addr ass = generate_exp(cur->child[1]);
         InterCode code1(SEL,ass,label1);
+        InterCode code2(GOTO,label2);
+        InterCode code3(LABEL,label1);
+        InterCode code4(LABEL,label2);
         IRCodes.insert(code1);
         IRCodes.insert(code2);
-    }
-    if(cur->child.size() == 4){
-        // LABEL label1 = new_label();
-        Addr ass = generate_assignment(cur->child[1]);
+        IRCodes.insert(code3);
         Addr state = generate_statement(cur->child[2]);
+        IRCodes.insert(code4);
+    }
+    if(cur->child.size() == 5){
+        // LABEL label1 = new_label();
+        Addr ass = generate_exp(cur->child[1]);
+        Addr label1 = new Addr_(AddrKind::LAB, new_label());
+        Addr label2 = new Addr_(AddrKind::LAB, new_label());
+        InterCode code1(SEL,ass,label1);
+        InterCode code2(GOTO, label2);
+        InterCode code3(LABEL,label1);
+        InterCode code4(LABEL,label2);
+        IRCodes.insert(code1);        
         Addr elsestmt = generate_statement(cur->child[4]);
-        InterCode code(SEL,ass,state,elsestmt);
-        IRCodes.insert(code);
+        IRCodes.insert(code2);
+        IRCodes.insert(code3);
+        Addr state = generate_statement(cur->child[2]);
+        IRCodes.insert(code4);
     }
 }
 
-Addr generate_statement(TreeNode *cur) {
-    cout << cur->value << endl;
-    if (cur->value == "statement_exp"){
-        return generate_exp_stmt(cur->child[0]);
+Addr generate_iter(TreeNode *cur){
+    Addr addr1, addr2, addr3;
+    if(cur->child.size()==3){
+        // while
+        Addr label1 = new Addr_(AddrKind::LAB, new_label());
+        Addr label2 = new Addr_(AddrKind::LAB, new_label());
+        Addr label3 = new Addr_(AddrKind::LAB, new_label());
+        InterCode goto1Code(GOTO, label1);
+        InterCode goto3Code(GOTO, label3);
+        InterCode label1Code(LABEL, label1);
+        InterCode label2Code(LABEL, label2);   
+        InterCode label3Code(LABEL, label3);   
+        
+        IRCodes.insert(label1Code);                     // label 1:   
+        Addr ass = generate_exp(cur->child[1]);         
+        InterCode selCode(SEL, ass, label2);            
+        IRCodes.insert(selCode);                        // judge goto label2
+        IRCodes.insert(goto3Code);                      // goto label3
+        IRCodes.insert(label2Code);                     // label 2:
+        generate_statement(cur->child[2]);              // body
+        IRCodes.insert(goto1Code);                      // goto label 1
+        IRCodes.insert(label3Code);                     // label 3:
+
+    }else if(cur->child.size()==4){
+        //Do while
+        Addr label1 = new Addr_(AddrKind::LAB, new_label());
+        Addr label2 = new Addr_(AddrKind::LAB, new_label());
+        InterCode label1Code(LABEL, label1);
+        IRCodes.insert(label1Code);                     // label 1:
+        generate_statement(cur->child[1]);              // body
+        Addr ass = generate_exp(cur->child[3]);        
+        InterCode selCode(SEL, ass, label1);            
+        IRCodes.insert(selCode);                        // judge goto label 1
+
+    }else if(cur->child.size()==5){
+        //for without                   FOR (exp1; judge; exp2) body
+        generate_exp(cur->child[1]);                   //      exp1
+
+        Addr label1 = new Addr_(AddrKind::LAB, new_label());
+        Addr label2 = new Addr_(AddrKind::LAB, new_label());
+        Addr label3 = new Addr_(AddrKind::LAB, new_label());
+        InterCode goto1Code(GOTO, label1);
+        InterCode goto2Code(GOTO, label2);
+        InterCode goto3Code(GOTO, label3);
+        InterCode label1Code(LABEL, label1);
+        InterCode label2Code(LABEL, label2);           
+        InterCode label3Code(LABEL, label2);           
+
+        IRCodes.insert(label1Code);                     // label 1:
+        Addr ass = generate_exp(cur->child[2]);         
+        InterCode selCode(SEL, ass, label1);        
+        IRCodes.insert(selCode);                        // judge goto label 2
+        IRCodes.insert(goto3Code);                      // goto label 3
+        IRCodes.insert(label2Code);                     // label 2:
+        
+        generate_statement(cur->child[4]);              // body
+        generate_statement(cur->child[3]);              // exp2
+        IRCodes.insert(goto1Code);                      // goto label 1
+        IRCodes.insert(label3Code);                     // label 3:
+
+
+    }else if(cur->child.size()==6){
+        //for with declarator
+        Addr label1 = new Addr_(AddrKind::LAB, new_label());
+        Addr label2 = new Addr_(AddrKind::LAB, new_label());
+        Addr label3 = new Addr_(AddrKind::LAB, new_label());
+        InterCode goto1Code(GOTO, label1);
+        InterCode goto2Code(GOTO, label2);
+        InterCode goto3Code(GOTO, label3);
+        InterCode label1Code(LABEL, label1);
+        InterCode label2Code(LABEL, label2);           
+        InterCode label3Code(LABEL, label2);  
+        generate_val_list(cur->child[1]->child[0]->value, cur->child[2]);
+
+        IRCodes.insert(label1Code);                     // label 1:
+        Addr ass = generate_exp(cur->child[3]);         
+        InterCode selCode(SEL, ass, label1);        
+        IRCodes.insert(selCode);                        // judge goto label 2
+        IRCodes.insert(goto3Code);                      // goto label 3
+        IRCodes.insert(label2Code);                     // label 2:
+        
+        generate_statement(cur->child[5]);              // body
+        generate_statement(cur->child[4]);              // exp2
+        IRCodes.insert(goto1Code);                      // goto label 1
+        IRCodes.insert(label3Code);                     // label 3:
+    }
+
+}
+
+
+Addr generate_statement(TreeNode *cur){
+    Addr addr1,addr2,addr3;
+    if(cur->value == "statement_exp"){
+        if(cur->child[0]->child.size()==1){
+            addr1 = generate_exp(cur->child[0]->child[0]);
+        }
+       
     }
     else if(cur->value == "statement_dec"){
-        cur->child[0]->attr.isdone = 1;
-        return generate_val(cur->child[0]);
+       addr1 = generate_val(cur->child[0]);
+
     }
-    else if (cur->value == "statement_comp"){
-        cur->child[1]->attr.isdone = 1;
-        return generate_statement_list(cur->child[0]);
+    else if(cur->value == "statement_comp"){
+        if(cur->child.size()==1)
+            generate_statement_list(cur->child[0]);
+
     }
-    else if (cur->value == "statement_sel"){
-        return generate_if_stmt(cur->child[0]);
+    else if(cur->value == "statement_sel"){
+       addr1 = generate_if_stmt(cur->child[0]);
+        
     }
-    else if (cur->value == "statement_iter"){
-        // generate_while_stmt(cur->child[0]);
+    else if(cur->value == "statement_iter"){
+       addr1 = generate_iter(cur->child[0]);
     }
-    else if (cur->value == "statement_jump"){
-        // generate_jump_stmt(cur->child[0]);
+    else if(cur->value == "statement_jump"){
+    //    addr1 = generate_statement(cur->child[0]);
+        if(cur->child[0]->value=="jump_operator_break"){
+
+        }else if(cur->child[0]->value=="jump_operator_continue"){
+                    
+        }
     }
-    else if (cur->value == "statement_return"){
-        flag = 0;
-        return generate_ret_stmt(cur->child[0]);
+    else if(cur->value == "statement_return"){
+       addr1 = generate_ret_stmt(cur->child[1]);
     }
+    
 }
 
 Addr generate_statement_list(TreeNode *cur) {
     if (cur->child.size() == 2) {
         generate_statement_list(cur->child[0]);
-        cur->child[0]->attr.isdone = 1;
         generate_statement(cur->child[1]);
     }
     else{
         cout<<"statement_list->statement"<<endl;
-        cur->child[0]->attr.isdone = 1;
         return generate_statement(cur->child[0]);
     }
 }
@@ -544,16 +714,20 @@ void GenerateIR(SyntaxTree cur) {
     // cout << "IR"<<cur->value << endl;
     
     if (cur->value == "function_definition"){
-        flag = 1;
         generate_func(cur);
+        GenerateIR(cur->child[3]);
+        return;
     }
-    else if (cur->value == "declaration" && flag == 0 && !cur->attr.isdone)
+    else if (cur->value == "declaration"){
+        // 在此进入的一定是全局变量
         generate_val(cur);
-    else if (cur->value == "statement_list")
-        if (!cur->attr.isdone){
-            generate_statement_list(cur);
-            cur->attr.isdone = 1;
-        }
+        return;
+    }
+    else if (cur->value == "statement_list"){
+        generate_statement_list(cur);
+        cur->attr.isdone = 1;
+        return;
+    }
 
     if (!cur->child.empty()) {
         // 遍历子节点
@@ -563,4 +737,3 @@ void GenerateIR(SyntaxTree cur) {
         }
     }
 }
-
