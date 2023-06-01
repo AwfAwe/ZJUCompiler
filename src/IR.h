@@ -13,7 +13,7 @@ extern targetCode targetCodes;
 
 typedef class Addr_ *Addr;
 
-enum AddrKind { LAB, VARIABLE, ARRAY, CONSTANT, STRING, EMPTY, VARIABLEINIT, ARRAYINIT };
+enum AddrKind { LAB, VARIABLE, ARRAY, CONSTANT, STRING, EMPTY, VARIABLEINIT, ARRAYINIT, POINT, OP, BRACEEXP, POSTFIX };
 
 static bool is_skip = false;
 
@@ -30,6 +30,7 @@ class Addr_ {
             this->kind = kind;
             this->name = name;
             this->value = value;
+            // cout<<"type1:"<<kind<<name<<value<<endl;
         }
         Addr_(AddrKind kind, string name) {
             this->kind = kind;
@@ -40,11 +41,14 @@ class Addr_ {
             this->kind = kind;
             this->value = value;
             this->name = "_none_";
+            // cout<<"type2:"<<kind<<endl;
+
         }
         Addr_(AddrKind kind) {
             this->kind = kind;
             this->name = "_none_";
             this->value = 0;
+            // cout<<"type3:"<<kind<<endl;
         }
 
         Addr_() {
@@ -55,6 +59,11 @@ class Addr_ {
 };
 
 enum OpKind {
+    ASSIGNMENT,
+    ID,
+    CONSTANTNUM,
+    CONSTANTCHAR,
+    BRACE,
     ASSIGN,
     ADD,
     SUB,
@@ -64,9 +73,12 @@ enum OpKind {
     LABEL,
     SEL,
     FUNC,
+    FUNCBODY,
     ARG,
     CALL,
     PARAM,
+    EMPTYPARAM,
+    POINTDEC,
     ADDR,
     VAL,
     READ,
@@ -74,6 +86,9 @@ enum OpKind {
     RET,
     DECARRAY,
     DECVARIABLE,
+    DECVARIABLEINIT,
+    POSTFIXDEC,
+    POSTFIXINC,
     LEQ,
     L,
     G,
@@ -167,7 +182,51 @@ class IRCode {
             else {
                 show(node->next);
                 string IRcode;
+                string temp = "";
                 switch (node->code.kind) {
+                    case ASSIGNMENT:
+                        if(node->code.addr2->name == "EQ")
+                          temp = "=";
+                        if(node->code.addr2->name == "ADD")
+                          temp = "+=";
+                        if(node->code.addr2->name == "SUB")
+                          temp = "-=";
+                        if(node->code.addr2->name == "MUL")
+                          temp = "*=";
+                        if(node->code.addr2->name == "DIV")
+                          temp = "'\'=";
+                        if(node->code.addr2->name == "MOD")
+                          temp = "%=";
+                        if(node->code.addr2->name == "LEFT")
+                          temp = "<<=";
+                        if(node->code.addr2->name == "RIGHT")
+                          temp = ">>=";
+                        if(node->code.addr2->name == "AND")
+                          temp = "&=";
+                        if(node->code.addr2->name == "XOR")
+                          temp = "^=";
+                        if(node->code.addr2->name == "OR")
+                          temp = "|=";
+                        IRcode = node->code.addr1->name + temp + node->code.addr3->name;
+                        break;
+                    case ID:
+                        IRcode = str_addr(node->code.addr1);
+                        break;
+                    case CONSTANTNUM:
+                        IRcode = str_addr(node->code.addr1);
+                        break;
+                    case CONSTANTCHAR:
+                        IRcode = str_addr(node->code.addr1);
+                        break;
+                    case BRACE:
+                        IRcode = "(" + str_addr(node->code.addr1) + ")";
+                        break;
+                    case POSTFIXDEC:
+                        IRcode = "--" + str_addr(node->code.addr1);
+                        break;
+                    case POSTFIXINC:
+                        IRcode = "++" + str_addr(node->code.addr1);
+                        break;
                     case ASSIGN:
                         IRcode = str_addr(node->code.addr1) + " = " +
                                 str_addr(node->code.addr2);
@@ -235,7 +294,7 @@ class IRCode {
                         targetCodes.asm_label(str_addr(node->code.addr1));	
                         break;
                     case FUNC:
-                        IRcode = "FUNC " + str_addr(node->code.addr1);
+                        IRcode = "\nFUNC " + str_addr(node->code.addr1) + " " + str_addr(node->code.addr2);
                         if(str_addr(node->code.addr1) == "input" || str_addr(node->code.addr1) == "output")
                         {
                             is_skip = true;
@@ -243,6 +302,12 @@ class IRCode {
                         }
                         is_skip = false;
                         targetCodes.asm_function(str_addr(node->code.addr1));
+                        break;
+                    case FUNCBODY:
+                        IRcode = "BODY";
+                        break;
+                    case EMPTYPARAM:
+                        IRcode = "NO PARAM";
                         break;
                     case ARG:
                         IRcode = "ARG " + str_addr(node->code.addr1);
@@ -256,17 +321,17 @@ class IRCode {
                         if (node->code.addr1->kind == ARRAY)
                             IRcode = "PARAM *" + str_addr(node->code.addr1);
                         else if(node->code.addr1->kind == VARIABLE)
-                            IRcode = "PARAM " + str_addr(node->code.addr1);
+                            IRcode = "PARAM " + str_addr(node->code.addr1) + " " + str_addr(node->code.addr2);
                         else if(node->code.addr1->kind == ARRAYINIT)
-                            IRcode = "PARAM *" + str_addr(node->code.addr1) + '=' + str_addr(node->code.addr3);
+                            IRcode = "PARAM *" + str_addr(node->code.addr1) + '=' + str_addr(node->code.addr2);
                         else if(node->code.addr1->kind == VARIABLEINIT)
-                            IRcode = "PARAM " + str_addr(node->code.addr1) + '=' + str_addr(node->code.addr3);
+                            IRcode = "PARAM " + str_addr(node->code.addr1) + " " + str_addr(node->code.addr2) + '=' + str_addr(node->code.addr3);
                         if(is_skip == false)
                         {
                             targetCodes.asm_function_parameter(str_addr(node->code.addr1));
                         }
                         break;
-                    case POINT:
+                    case POINTDEC:
                         IRcode = "DEC *" + str_addr(node->code.addr1);
                         break;
                     case ADDR:
@@ -315,8 +380,11 @@ class IRCode {
                         IRcode = "DEC " + node->code.addr1->name + "[" + to_string(node->code.addr1->value) + "]";
                         targetCodes.asm_declaration(str_addr(node->code.addr1));
                         break;
+                    case DECVARIABLEINIT:
+                        IRcode = "DEC " + node->code.addr1->name + " " + node->code.addr2->name + '=' + node->code.addr3->name;
+                        break;
                     case DECVARIABLE:
-                        IRcode = "DEC" + node->code.addr1->name;
+                        IRcode = "DEC " + node->code.addr1->name + " " + node->code.addr2->name;
                         targetCodes.asm_declaration(str_addr(node->code.addr1));
                         break;
                     case LEQ:
@@ -359,15 +427,18 @@ class IRCode {
                                                           (node->code.addr2->kind == CONSTANT),
                                                           (node->code.addr3->kind == CONSTANT));
                         break;
+                    // case EQ:
+                    //     IRcode = str_addr(node->code.addr1) + " = " +
+                    //              str_addr(node->code.addr2) + " == " + 
+                    //              str_addr(node->code.addr3);
+                    //     targetCodes.asm_set_equal(str_addr(node->code.addr1),
+                    //                               str_addr(node->code.addr2),
+                    //                               str_addr(node->code.addr3),
+                    //                               (node->code.addr2->kind == CONSTANT),
+                    //                               (node->code.addr3->kind == CONSTANT));
+                    //     break;
                     case EQ:
-                        IRcode = str_addr(node->code.addr1) + " = " +
-                                 str_addr(node->code.addr2) + " == " + 
-                                 str_addr(node->code.addr3);
-                        targetCodes.asm_set_equal(str_addr(node->code.addr1),
-                                                  str_addr(node->code.addr2),
-                                                  str_addr(node->code.addr3),
-                                                  (node->code.addr2->kind == CONSTANT),
-                                                  (node->code.addr3->kind == CONSTANT));
+                        IRcode = '=';
                         break;
                     case NE:
                         IRcode = str_addr(node->code.addr1) + " = " +
@@ -399,4 +470,5 @@ class IRCode {
 };
 
 Addr generate_exp(TreeNode *cur);
-void generate_statement(TreeNode *cur);
+Addr generate_statement(TreeNode *cur);
+
