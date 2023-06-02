@@ -433,11 +433,15 @@ Addr generate_exp(TreeNode *cur){
         return a1;
     }
     else if(cur->value == "primary_expression_constantInt"){
-        a1 = new Addr_(cur->child[0]->value, cur->child[0]->attr.numval);
+        a1 = new Addr_(CONSTANT, cur->child[0]->value, cur->child[0]->attr.numval);
         return a1;
     }
+    else if(cur->value == "primary_expression_constantFloat"){
+        a1 = new Addr_(CONSTANT, cur->child[0]->value, cur->child[0]->attr.fnumval);
+        return a1;
+    }    
     else if(cur->value == "primary_expression_constantChar"){
-        a1 = new Addr_(cur->child[0]->value);
+        a1 = new Addr_(CONSTANT, cur->child[0]->value, cur->child[0]->attr.cnumval);
         return a1;
     }
     else if(cur->value == "primary_expression_brace"){
