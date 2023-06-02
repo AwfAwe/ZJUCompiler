@@ -26,7 +26,7 @@ ofstream IRofs;
 %nonassoc ELSE
 
 %token increment decrement arrow
-%token IDENTIFIER NUM CHARACTERS
+%token IDENTIFIER INTNUM FLOATNUM CHARACTERS
 %token INT FLOAT CHAR VOID
 %token CONST VOLATILE
 %token PURE_ASSIGN ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN
@@ -147,7 +147,7 @@ direct_declarator : IDENTIFIER {
 						$$->AddNode($1);
 						$$->row = $1->row;
 					}
-                  | direct_declarator '[' NUM ']' {
+                  | direct_declarator '[' INTNUM ']' {
 						$$ = new TreeNode("direct_declarator");
 						$$->AddNode($1)->AddNode($3);
 						$$->row = $1->row;					
@@ -562,8 +562,13 @@ primary_expression : IDENTIFIER {
                     $$->AddNode($1);
                     $$->row = $1->row;
                 }
-                | NUM {
+                | INTNUM {
                     $$ = new TreeNode("primary_expression_constantInt");
+                    $$->AddNode($1);
+                    $$->row = $1->row;
+                }
+                | FLOATNUM {
+                    $$ = new TreeNode("primary_expression_constantFloat");
                     $$->AddNode($1);
                     $$->row = $1->row;
                 }
