@@ -39,9 +39,11 @@ void generate_declarator(TreeNode *cur,string type){
         IRCodes.insert(code);
     }
     else{  //多维数组尚未处理
-    cout<<"direct_declarator->direct_declarator '[' NUM ']'"<<endl;
-        Addr dest = new Addr_(ARRAY, cur->child[1]->value,atoi(cur->child[2]->value.c_str()));
-        InterCode code(DECARRAY,dest);
+    cout<<"direct_declarator->direct_declarator '[' NUM ']'"<<cur->child[0]->child[0]->value<<endl;
+        Addr typedest = new Addr_(VARIABLE,type);
+        Addr dest = new Addr_(ARRAY, cur->child[0]->child[0]->value);
+        Addr length = new Addr_(ARRAY,atoi(cur->child[1]->value.c_str()));
+        InterCode code(DECARRAY,typedest,dest,length);
         IRCodes.insert(code);
     }
 }
@@ -396,12 +398,14 @@ Addr generate_exp(TreeNode *cur){
         return a1;         
     }
     else if(cur->value == "postfix_expression_call"){
+        cout<<"callfunc"<<endl;
         a1 = new Addr_();
         a2 = generate_exp(cur->child[0]);
-        InterCode code(VISITARRAY, a1, a2, a3);
+        cout<<"call"<<endl;
+        InterCode code(CALL,a1,a2);
         IRCodes.insert(code);
         generate_args(cur->child[1]);
-
+        cout<<"callfinish"<<endl;
         return a1;        
     }
     else if(cur->value == "postfix_expression_struct"){
@@ -437,24 +441,28 @@ Addr generate_exp(TreeNode *cur){
         return a1;
     }
     else if(cur->value == "primary_expression_brace"){
-        cout<<"brace"<<endl;
+        // cout<<"brace"<<endl;
         a1 = generate_exp(cur->child[0]);
-        cout<<"bracefinish"<<endl;
+        // cout<<"bracefinish"<<endl;
         return a1;
     }
-
+    else if (cur->value == "expression_opt"){
+        a1 = generate_exp(cur->child[0]);
+        return a1;
+    }
 }
 
 Addr generate_ret_stmt(TreeNode *cur){
+    cout<<cur->child.size()<<"   "<<cur->child[1]->value<<endl;
     if(cur->child[1]->child.size()==1){
         Addr dest = generate_exp(cur->child[1]->child[0]);
         InterCode code(RET, dest);
-        cout<<"ret:"<<dest->name<<endl;
+        // cout<<"ret:"<<dest->name<<endl;
         IRCodes.insert(code);
     }else{
         Addr dest = new Addr_(EMPTY);
         InterCode code(RET, dest);
-        cout<<"ret:"<<endl;
+        // cout<<"ret:"<<endl;
         IRCodes.insert(code);
     }
 }
@@ -548,8 +556,9 @@ Addr generate_iter(TreeNode *cur){
         IRCodes.insert(goto3Code);                      // goto label 3
         IRCodes.insert(label2Code);                     // label 2:
         
+        cout<<"body "<<cur->child[4]->child.size()<<endl;
         generate_statement(cur->child[4]);              // body
-        generate_statement(cur->child[3]);              // exp2
+        generate_exp(cur->child[3]);              // exp2
         IRCodes.insert(goto1Code);                      // goto label 1
         IRCodes.insert(label3Code);                     // label 3:
 
@@ -574,8 +583,8 @@ Addr generate_iter(TreeNode *cur){
         IRCodes.insert(goto3Code);                      // goto label 3
         IRCodes.insert(label2Code);                     // label 2:
         
-        generate_statement(cur->child[5]);              // body
-        generate_statement(cur->child[4]);              // exp2
+        generate_statement_list(cur->child[5]);              // body
+        generate_exp(cur->child[4]);              // exp2
         IRCodes.insert(goto1Code);                      // goto label 1
         IRCodes.insert(label3Code);                     // label 3:
     }
@@ -585,20 +594,24 @@ Addr generate_iter(TreeNode *cur){
 
 Addr generate_statement(TreeNode *cur){
     Addr addr1,addr2,addr3;
+    cout<<"state:"<<cur->value<<endl;
+    // if(cur->value == "statement_list"){
+    //     generate_statement_list(cur->child[0]);
+    // }
     if(cur->value == "statement_exp"){
         if(cur->child[0]->child.size()==1){
             addr1 = generate_exp(cur->child[0]->child[0]);
         }
-       
     }
     else if(cur->value == "statement_dec"){
        addr1 = generate_val(cur->child[0]);
 
     }
     else if(cur->value == "statement_comp"){
-        if(cur->child.size()==1)
+        if(cur->child.size()==1){
+            // cout<<"comp"<<endl;
             generate_statement_list(cur->child[0]);
-
+        }
     }
     else if(cur->value == "statement_sel"){
        addr1 = generate_if_stmt(cur->child[0]);
@@ -616,7 +629,7 @@ Addr generate_statement(TreeNode *cur){
         }
     }
     else if(cur->value == "statement_return"){
-       addr1 = generate_ret_stmt(cur->child[1]);
+       addr1 = generate_ret_stmt(cur->child[0]);
     }
     
 }
@@ -627,7 +640,9 @@ Addr generate_statement_list(TreeNode *cur) {
         generate_statement(cur->child[1]);
     }
     else{
-        cout<<"statement_list->statement"<<endl;
+        cout<<"statement_list->statement "<<endl;
+        while(cur->child[0]->value == "statement_list")
+           cur = cur->child[0];
         return generate_statement(cur->child[0]);
     }
 }
@@ -644,7 +659,8 @@ void generate_param(TreeNode *cur) {
         }
         else{
             cout<<"array"<<endl;
-            dest = new Addr_(ARRAY, cur->child[1]->child[0]->child[0]->value);
+            typedest = new Addr_(VARIABLE,cur->child[0]->child[0]->value);
+            dest = new Addr_(ARRAY, cur->child[1]->child[0]->child[0]->value,stoi(cur->child[1]->child[0]->child[1]->value));
         }
         InterCode code(PARAM,typedest,dest);
         IRCodes.insert(code);
