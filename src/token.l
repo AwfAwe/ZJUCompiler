@@ -16,7 +16,8 @@ int cur_column=1;
 %}
 
 IDENTIFIER ([a-zA-Z]|'_')([a-zA-Z]|'_'|[0-9])*
-NUM [0-9]+'.'[0-9]+|[0-9]+
+FLOATNUM [0-9]+'.'[0-9]+|[0-9]+
+INTNUM [0-9]+
 CHARACTERS \'[\x00-\x7F]\'
 
 LEFT_ASSIGN "<<="
@@ -243,6 +244,22 @@ COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
     return PURE_ASSIGN;
 }
 
+
+"^"		{
+	yylval = nullptr;
+	return *yytext;
+}
+
+"|"		{
+	yylval = nullptr;
+	return *yytext;
+}
+
+"^"		{
+	yylval = nullptr;
+	return *yytext;
+}
+
 ";"		{
 	yylval = nullptr;
 	return *yytext;
@@ -383,6 +400,14 @@ COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
     return DO;    
 }
 
+"float"    {
+    yylval = new TreeNode;
+    yylval->row = cur_row;
+    yylval->type = "KEYWORD";
+    yylval->value = "FLOAT";
+    return FLOAT;
+}
+
 "int"    {
     yylval = new TreeNode;
     yylval->row = cur_row;
@@ -399,13 +424,7 @@ COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
     return CHAR;
 }
 
-"float"    {
-    yylval = new TreeNode;
-    yylval->row = cur_row;
-    yylval->type = "KEYWORD";
-    yylval->value = "FLOAT";
-    return FLOAT;
-}
+
 
 "void"    {
     yylval = new TreeNode;
@@ -466,15 +485,26 @@ COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
     return IDENTIFIER;
 }
 
-{NUM}    {
+{INTNUM}    {
     yylval = new TreeNode;
     yylval->row = cur_row;
     //yylval->col = cur_column;
-    yylval->type = "NUM";
+    yylval->type = "INTNUM";
     yylval->value = yytext;
     yylval->attr.type= Type::Int;
     yylval->attr.numval = atoi(yytext);
-    return NUM;
+    return INTNUM;
+}
+
+{FLOATNUM}    {
+    yylval = new TreeNode;
+    yylval->row = cur_row;
+    //yylval->col = cur_column;
+    yylval->type = "FLOATNUM";
+    yylval->value = yytext;
+    yylval->attr.type= Type::Float;
+    yylval->attr.fnumval = atof(yytext);
+    return FLOATNUM;
 }
 
 {CHARACTERS} {
