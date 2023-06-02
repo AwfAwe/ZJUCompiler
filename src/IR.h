@@ -24,10 +24,28 @@ class Addr_ {
         AddrKind kind;
         string name; //地址名称
         int value;   //地址值
-
+        float fvalue;
+        char cvalue;
         //数组
         Addr_(AddrKind kind, string name, int value) {
             this->kind = kind;
+            this->name = name;
+            this->value = value;
+            // cout<<"type1:"<<kind<<name<<value<<endl;
+        }
+        Addr_(AddrKind kind, string name, float fvalue) {
+            this->kind = kind;
+            this->name = name;
+            this->fvalue = fvalue;
+            // cout<<"type1:"<<kind<<name<<value<<endl;
+        }
+        Addr_(AddrKind kind, string name, char cvalue) {
+            this->kind = kind;
+            this->name = name;
+            this->cvalue = cvalue;
+            // cout<<"type1:"<<kind<<name<<value<<endl;
+        }
+        Addr_(string name, int value) {
             this->name = name;
             this->value = value;
             // cout<<"type1:"<<kind<<name<<value<<endl;
@@ -75,8 +93,8 @@ enum OpKind {
     CONSTANTFLOAT,
     BRACE,
 
-    LOGICOR,
-    LOGICAND,
+    OR,
+    AND,
     BITOR,
     BITXOR,
     BITAND,
@@ -122,7 +140,8 @@ enum OpKind {
     TOINT,
     TOCHAR,
     TOFLOAT,
-
+    LOGICOR,
+    LOGICAND,
     GETADDR,
     PTR,
     POS,
@@ -134,8 +153,8 @@ enum OpKind {
     EMPTYARG,
     ARGEND,
 
-    // BREAK,
-    // CONTINUE,
+    BREAK,
+    CONTINUE,
 };
 
 bool operator==(struct InterCode code1, struct InterCode code2);
@@ -578,13 +597,13 @@ class IRCode {
                                                       (node->code.addr3->kind == CONSTANT));
                         break;
 
-                    // case BREAK:
-                    //     IRcode = "BREAK";
-                    //     break;
-                    // case CONTINUE:
-                    //     IRcode = "CONTINUE";
+                    case BREAK:
+                        IRcode = "BREAK";
+                        break;
+                    case CONTINUE:
+                        IRcode = "CONTINUE";
 
-                    //     break;
+                        break;
                     }   
                 cout << IRcode << endl;
                 IRofs << IRcode << endl;
