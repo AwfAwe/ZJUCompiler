@@ -183,16 +183,22 @@ Addr generate_lv(TreeNode *cur){
         a2 = generate_exp(cur->child[1]);
         a1 = generate_exp(cur->child[0]);
         a3 = new Addr_(a1->name+'['+a2->name+']');
+        return a3;
     }
-
+    else{
+        a1 = new Addr_(cur->child[0]->value);
+        return a1;
+    }
 }
 
 Addr generate_exp(TreeNode *cur){
     Addr a1, a2, a3;
     if(cur->value == "assignment_expression"){
+        cout<<"assign"<<endl;
         a1 = generate_lv(cur->child[0]);
         a2 = generate_assignment_operator(cur->child[1]);
         a3 = generate_exp(cur->child[2]);
+        cout<<a1->name<<"  "<<a3->value<<endl;
         InterCode code(ASSIGNMENT, a1, a2, a3);
         IRCodes.insert(code);
         return a1;
@@ -310,9 +316,10 @@ Addr generate_exp(TreeNode *cur){
         return a1; 
     }
     else if(cur->value == "additive_expression_add"){
+        cout<<"add"<<endl;
         a1 = new Addr_();
         a2 = generate_exp(cur->child[0]);
-        a3 = generate_exp(cur->child[2]);
+        a3 = generate_exp(cur->child[1]);
         InterCode code(ADD, a1, a2, a3);
         IRCodes.insert(code);
         return a1; 
@@ -320,7 +327,7 @@ Addr generate_exp(TreeNode *cur){
     else if(cur->value == "additive_expression_sub"){
         a1 = new Addr_();
         a2 = generate_exp(cur->child[0]);
-        a3 = generate_exp(cur->child[2]);
+        a3 = generate_exp(cur->child[1]);
         InterCode code(SUB, a1, a2, a3);
         IRCodes.insert(code);
         return a1; 
@@ -328,7 +335,7 @@ Addr generate_exp(TreeNode *cur){
     else if(cur->value == "multiplicative_expression_mul"){
         a1 = new Addr_();
         a2 = generate_exp(cur->child[0]);
-        a3 = generate_exp(cur->child[2]);
+        a3 = generate_exp(cur->child[1]);
         InterCode code(MUL, a1, a2, a3);
         IRCodes.insert(code);
         return a1; 
@@ -336,7 +343,7 @@ Addr generate_exp(TreeNode *cur){
     else if(cur->value == "multiplicative_expression_div"){
         a1 = new Addr_();
         a2 = generate_exp(cur->child[0]);
-        a3 = generate_exp(cur->child[2]);
+        a3 = generate_exp(cur->child[1]);
         InterCode code(DIV, a1, a2, a3);
         IRCodes.insert(code);
         return a1; 
@@ -430,7 +437,9 @@ Addr generate_exp(TreeNode *cur){
         return a1;
     }
     else if(cur->value == "primary_expression_brace"){
+        cout<<"brace"<<endl;
         a1 = generate_exp(cur->child[0]);
+        cout<<"bracefinish"<<endl;
         return a1;
     }
 
