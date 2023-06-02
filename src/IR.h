@@ -75,8 +75,8 @@ enum OpKind {
     CONSTANTFLOAT,
     BRACE,
 
-    OR,
-    AND,
+    LOGICOR,
+    LOGICAND,
     BITOR,
     BITXOR,
     BITAND,
@@ -134,8 +134,8 @@ enum OpKind {
     EMPTYARG,
     ARGEND,
 
-    BREAK,
-    CONTINUE,
+    // BREAK,
+    // CONTINUE,
 };
 
 bool operator==(struct InterCode code1, struct InterCode code2);
@@ -578,13 +578,13 @@ class IRCode {
                                                       (node->code.addr3->kind == CONSTANT));
                         break;
 
-                    case BREAK:
-                        IRcode = "BREAK";
-                        break;
-                    case CONTINUE:
-                        IRcode = "CONTINUE";
+                    // case BREAK:
+                    //     IRcode = "BREAK";
+                    //     break;
+                    // case CONTINUE:
+                    //     IRcode = "CONTINUE";
 
-                        break;
+                    //     break;
                     }   
                 cout << IRcode << endl;
                 IRofs << IRcode << endl;
