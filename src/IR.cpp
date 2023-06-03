@@ -12,6 +12,7 @@ Addr generate_statement_list(TreeNode *cur);
 Addr generate_unary(TreeNode *cur);
 Addr generate_equality_expression(TreeNode *cur);
 Addr generate_tri_equality_expression(TreeNode *cur);
+void GenerateIR(SyntaxTree cur);
 
 bool operator==(struct InterCode code1, struct InterCode code2) {
     return (code1.kind == code2.kind &&
@@ -232,8 +233,9 @@ Addr generate_exp(TreeNode *cur){
     }
     else if(cur->value == "inclusive_or_expression"){
         a1 = new Addr_();
+        // cout<<"BITOR"<<endl;
         a2 = generate_exp(cur->child[0]);
-        a3 = generate_exp(cur->child[2]);
+        a3 = generate_exp(cur->child[1]);
         InterCode code(BITOR, a1, a2, a3);
         IRCodes.insert(code);
         return a1;         
@@ -241,7 +243,7 @@ Addr generate_exp(TreeNode *cur){
     else if(cur->value == "exclusive_or_expression"){
         a1 = new Addr_();
         a2 = generate_exp(cur->child[0]);
-        a3 = generate_exp(cur->child[2]);
+        a3 = generate_exp(cur->child[1]);
         InterCode code(BITXOR, a1, a2, a3);
         IRCodes.insert(code);
         return a1;
@@ -249,7 +251,7 @@ Addr generate_exp(TreeNode *cur){
     else if(cur->value == "and_expression"){
         a1 = new Addr_();
         a2 = generate_exp(cur->child[0]);
-        a3 = generate_exp(cur->child[2]);
+        a3 = generate_exp(cur->child[1]);
         InterCode code(BITAND, a1, a2, a3);
         IRCodes.insert(code);
         return a1;
@@ -352,8 +354,11 @@ Addr generate_exp(TreeNode *cur){
     }
     else if(cur->value == "cast_expression"){
         a1 = new Addr_();
+        cout<<"111"<<endl;
         a2 = generate_exp(cur->child[1]);
         enum OpKind ty;
+        cout<<cur->child[0]->child[0]->value<<endl;
+
         if(cur->child[0]->child[0]->value=="INT")ty=TOINT;
         if(cur->child[0]->child[0]->value=="CHAR")ty=TOCHAR;
         if(cur->child[0]->child[0]->value=="FLOAT")ty=TOFLOAT;
@@ -433,15 +438,15 @@ Addr generate_exp(TreeNode *cur){
         return a1;
     }
     else if(cur->value == "primary_expression_constantInt"){
-        a1 = new Addr_(CONSTANT, cur->child[0]->value, cur->child[0]->attr.numval);
+        a1 = new Addr_(cur->child[0]->value, cur->child[0]->attr.numval);
         return a1;
     }
     else if(cur->value == "primary_expression_constantFloat"){
-        a1 = new Addr_(CONSTANT, cur->child[0]->value, cur->child[0]->attr.fnumval);
+        a1 = new Addr_(cur->child[0]->value, cur->child[0]->attr.fnumval);
         return a1;
-    }    
+    }
     else if(cur->value == "primary_expression_constantChar"){
-        a1 = new Addr_(CONSTANT, cur->child[0]->value, cur->child[0]->attr.cnumval);
+        a1 = new Addr_(cur->child[0]->value, cur->child[0]->attr.cnumval);
         return a1;
     }
     else if(cur->value == "primary_expression_brace"){
@@ -730,6 +735,10 @@ void generate_func(TreeNode *cur) {  //包括函数指针和普通函数
        InterCode code(OpKind::FUNC, typedest, dest);
        IRCodes.insert(code);
        generate_params(cur->child[2]);  //parameter_list_opt
+       GenerateIR(cur->child[3]);
+       cout<<"111"<<endl;
+       InterCode code2(OpKind::FUNCEND, dest);
+       IRCodes.insert(code2);
     }
     else{                               //ID(pointer declartor)
     cout<<"function_definition->declarator(1)->pointer(0) direct_declarator"<<endl;
@@ -737,6 +746,7 @@ void generate_func(TreeNode *cur) {  //包括函数指针和普通函数
        InterCode code(OpKind::FUNC, dest);
        IRCodes.insert(code);
        generate_params(cur->child[2]);  //parameter_list_opt
+       GenerateIR(cur->child[3]);
     }                               
 }
 
@@ -746,7 +756,7 @@ void GenerateIR(SyntaxTree cur) {
     
     if (cur->value == "function_definition"){
         generate_func(cur);
-        GenerateIR(cur->child[3]);
+        // GenerateIR(cur->child[3]);
         return;
     }
     else if (cur->value == "declaration"){

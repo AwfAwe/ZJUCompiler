@@ -24,28 +24,10 @@ class Addr_ {
         AddrKind kind;
         string name; //地址名称
         int value;   //地址值
-        float fvalue;
-        char cvalue;
+
         //数组
         Addr_(AddrKind kind, string name, int value) {
             this->kind = kind;
-            this->name = name;
-            this->value = value;
-            // cout<<"type1:"<<kind<<name<<value<<endl;
-        }
-        Addr_(AddrKind kind, string name, float fvalue) {
-            this->kind = kind;
-            this->name = name;
-            this->fvalue = fvalue;
-            // cout<<"type1:"<<kind<<name<<value<<endl;
-        }
-        Addr_(AddrKind kind, string name, char cvalue) {
-            this->kind = kind;
-            this->name = name;
-            this->cvalue = cvalue;
-            // cout<<"type1:"<<kind<<name<<value<<endl;
-        }
-        Addr_(string name, int value) {
             this->name = name;
             this->value = value;
             // cout<<"type1:"<<kind<<name<<value<<endl;
@@ -93,8 +75,8 @@ enum OpKind {
     CONSTANTFLOAT,
     BRACE,
 
-    OR,
-    AND,
+    LOGICOR,
+    LOGICAND,
     BITOR,
     BITXOR,
     BITAND,
@@ -109,6 +91,7 @@ enum OpKind {
     SEL,
     FUNC,
     FUNCBODY,
+    FUNCEND,
     ARG,
     
 
@@ -140,8 +123,7 @@ enum OpKind {
     TOINT,
     TOCHAR,
     TOFLOAT,
-    LOGICOR,
-    LOGICAND,
+
     GETADDR,
     PTR,
     POS,
@@ -153,8 +135,8 @@ enum OpKind {
     EMPTYARG,
     ARGEND,
 
-    BREAK,
-    CONTINUE,
+    // BREAK,
+    // CONTINUE,
 };
 
 bool operator==(struct InterCode code1, struct InterCode code2);
@@ -268,11 +250,15 @@ class IRCode {
                         if(node->code.addr2->name == "OR_ASSIGN")
                           temp = "|=";
                         IRcode = node->code.addr1->name + temp + node->code.addr3->name;
+                        // targetCode.asm_assign_add();
                         break;
                     case ID:
                         IRcode = str_addr(node->code.addr1);
                         break;
                     case CONSTANTNUM:
+                        IRcode = str_addr(node->code.addr1);
+                        break;
+                    case CONSTANTFLOAT:
                         IRcode = str_addr(node->code.addr1);
                         break;
                     case CONSTANTCHAR:
@@ -321,6 +307,26 @@ class IRCode {
                     case NOT:
                         IRcode = str_addr(node->code.addr1) + " = " +
                         " NOT " + str_addr(node->code.addr2);
+                        break;
+                    case LOGICAND:
+                        IRcode = str_addr(node->code.addr1) + "=" + str_addr(node->code.addr2)
+                         + "&&" + str_addr(node->code.addr3);
+                        break;
+                    case LOGICOR:
+                        IRcode = str_addr(node->code.addr1) + "=" + str_addr(node->code.addr2)
+                         + "||" + str_addr(node->code.addr3);
+                        break;
+                    case BITAND:
+                        IRcode = str_addr(node->code.addr1) + "=" + str_addr(node->code.addr2)
+                         + "&" + str_addr(node->code.addr3);
+                        break;
+                    case BITOR:
+                        IRcode = str_addr(node->code.addr1) + "=" + str_addr(node->code.addr2)
+                         + "|" + str_addr(node->code.addr3);
+                        break;
+                    case BITXOR:
+                        IRcode = str_addr(node->code.addr1) + "=" + str_addr(node->code.addr2)
+                         + "^" + str_addr(node->code.addr3);
                         break;
                     case TOINT:
                         IRcode = str_addr(node->code.addr1) + " = " +
@@ -438,6 +444,9 @@ class IRCode {
                     case FUNCBODY:
                         IRcode = "BODY";
                         break;
+                    case FUNCEND:
+                        IRcode = str_addr(node->code.addr1)+" END";
+                        break;
                     case EMPTYPARAM:
                         IRcode = "NO PARAM";
                         break;
@@ -515,7 +524,7 @@ class IRCode {
                         }
                         break;
                     case DECARRAY:
-                        IRcode = "DEC " + node->code.addr1->name + "[" + to_string(node->code.addr1->value) + "]";
+                        IRcode = "DEC " + node->code.addr1->name + " " + node->code.addr2->name + "[" + to_string(node->code.addr3->value) + "]";
                         targetCodes.asm_declaration(str_addr(node->code.addr1));
                         break;
                     case DECVARIABLEINIT:
@@ -597,13 +606,13 @@ class IRCode {
                                                       (node->code.addr3->kind == CONSTANT));
                         break;
 
-                    case BREAK:
-                        IRcode = "BREAK";
-                        break;
-                    case CONTINUE:
-                        IRcode = "CONTINUE";
+                    // case BREAK:
+                    //     IRcode = "BREAK";
+                    //     break;
+                    // case CONTINUE:
+                    //     IRcode = "CONTINUE";
 
-                        break;
+                    //     break;
                     }   
                 cout << IRcode << endl;
                 IRofs << IRcode << endl;

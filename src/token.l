@@ -16,9 +16,10 @@ int cur_column=1;
 %}
 
 IDENTIFIER ([a-zA-Z]|'_')([a-zA-Z]|'_'|[0-9])*
-FLOATNUM [0-9]+'.'[0-9]+|[0-9]+
+FLOATNUM ([0-9]+)\.([0-9]+)
 INTNUM [0-9]+
 CHARACTERS \'[\x00-\x7F]\'
+
 
 LEFT_ASSIGN "<<="
 RIGHT_ASSIGN ">>="
@@ -47,9 +48,13 @@ RIGHT_SHIFT ">>"
 AND "&&"
 OR "||"
 
+ORBIT "|"
+ANDBIT "&"
+
 LESSTHAN "<"
 GREATTHAN ">"
 PURE_ASSIGN "="
+
 
 COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
 
@@ -220,6 +225,22 @@ COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
     return OR;
 }
 
+{ANDBIT} {
+    yylval = new TreeNode;
+    yylval->row = cur_row;
+    yylval->type = "ANDBIT";
+    yylval->value = yytext;
+    return ANDBIT;
+}
+
+{ORBIT} {
+    yylval = new TreeNode;
+    yylval->row = cur_row;
+    yylval->type = "ORBIT";
+    yylval->value = yytext;
+    return ORBIT;
+}
+
 {LESSTHAN} {
     yylval = new TreeNode;
     yylval->row = cur_row;
@@ -242,22 +263,6 @@ COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
     yylval->type = "PURE_ASSIGN";
     yylval->value = yytext;
     return PURE_ASSIGN;
-}
-
-
-"^"		{
-	yylval = nullptr;
-	return *yytext;
-}
-
-"|"		{
-	yylval = nullptr;
-	return *yytext;
-}
-
-"^"		{
-	yylval = nullptr;
-	return *yytext;
 }
 
 ";"		{
@@ -400,14 +405,6 @@ COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
     return DO;    
 }
 
-"float"    {
-    yylval = new TreeNode;
-    yylval->row = cur_row;
-    yylval->type = "KEYWORD";
-    yylval->value = "FLOAT";
-    return FLOAT;
-}
-
 "int"    {
     yylval = new TreeNode;
     yylval->row = cur_row;
@@ -424,7 +421,13 @@ COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
     return CHAR;
 }
 
-
+"float"    {
+    yylval = new TreeNode;
+    yylval->row = cur_row;
+    yylval->type = "KEYWORD";
+    yylval->value = "FLOAT";
+    return FLOAT;
+}
 
 "void"    {
     yylval = new TreeNode;
@@ -503,13 +506,18 @@ COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
     yylval->type = "FLOATNUM";
     yylval->value = yytext;
     yylval->attr.type= Type::Float;
-    yylval->attr.fnumval = atof(yytext);
+    yylval->attr.fnumval = atoi(yytext);
     return FLOATNUM;
 }
 
 {CHARACTERS} {
     yylval = new TreeNode;
-    yylval->setNode(cur_row, yytext, Type::Char, yytext);
+    yylval->row = cur_row;
+    //yylval->col = cur_column;
+    yylval->type = "CHARACTERS";
+    yylval->value = yytext;
+    yylval->attr.type= Type::Char;
+    yylval->attr.cnumval = atoi(yytext);
     return CHARACTERS;
 }
 
