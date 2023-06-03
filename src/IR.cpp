@@ -190,6 +190,7 @@ Addr generate_lv(TreeNode *cur){
     }
     else{
         a1 = new Addr_(cur->child[0]->value);
+        cout<<cur->child[0]->value<<endl;
         return a1;
     }
 }
@@ -197,7 +198,7 @@ Addr generate_lv(TreeNode *cur){
 Addr generate_exp(TreeNode *cur){
     Addr a1, a2, a3;
     if(cur->value == "assignment_expression"){
-        cout<<"assign"<<endl;
+        // cout<<"assign"<<endl;
         a1 = generate_lv(cur->child[0]);
         a2 = generate_assignment_operator(cur->child[1]);
         a3 = generate_exp(cur->child[2]);
@@ -556,22 +557,20 @@ Addr generate_iter(TreeNode *cur){
         InterCode goto3Code(GOTO, label3);
         InterCode label1Code(LABEL, label1);
         InterCode label2Code(LABEL, label2);           
-        InterCode label3Code(LABEL, label2);           
+        InterCode label3Code(LABEL, label3);           
 
         IRCodes.insert(label1Code);                     // label 1:
         Addr ass = generate_exp(cur->child[2]);         
-        InterCode selCode(SEL, ass, label1);        
+        InterCode selCode(SEL, ass, label2);        
         IRCodes.insert(selCode);                        // judge goto label 2
         IRCodes.insert(goto3Code);                      // goto label 3
         IRCodes.insert(label2Code);                     // label 2:
         
-        cout<<"body "<<cur->child[4]->child.size()<<endl;
+        // cout<<"body "<<cur->child[4]->child.size()<<endl;
         generate_statement(cur->child[4]);              // body
         generate_exp(cur->child[3]);              // exp2
         IRCodes.insert(goto1Code);                      // goto label 1
         IRCodes.insert(label3Code);                     // label 3:
-
-
     }else if(cur->child.size()==6){
         //for with declarator
         Addr label1 = new Addr_(AddrKind::LAB, new_label());
@@ -582,17 +581,17 @@ Addr generate_iter(TreeNode *cur){
         InterCode goto3Code(GOTO, label3);
         InterCode label1Code(LABEL, label1);
         InterCode label2Code(LABEL, label2);           
-        InterCode label3Code(LABEL, label2);  
+        InterCode label3Code(LABEL, label3);  
         generate_val_list(cur->child[1]->child[0]->value, cur->child[2]);
 
         IRCodes.insert(label1Code);                     // label 1:
         Addr ass = generate_exp(cur->child[3]);         
-        InterCode selCode(SEL, ass, label1);        
+        InterCode selCode(SEL, ass, label2);        
         IRCodes.insert(selCode);                        // judge goto label 2
         IRCodes.insert(goto3Code);                      // goto label 3
         IRCodes.insert(label2Code);                     // label 2:
         
-        generate_statement_list(cur->child[5]);              // body
+        generate_statement(cur->child[5]);              // body
         generate_exp(cur->child[4]);              // exp2
         IRCodes.insert(goto1Code);                      // goto label 1
         IRCodes.insert(label3Code);                     // label 3:
@@ -604,10 +603,10 @@ Addr generate_iter(TreeNode *cur){
 Addr generate_statement(TreeNode *cur){
     Addr addr1,addr2,addr3;
     cout<<"state:"<<cur->value<<endl;
-    // if(cur->value == "statement_list"){
-    //     generate_statement_list(cur->child[0]);
-    // }
-    if(cur->value == "statement_exp"){
+    if(cur->value == "statement_list"){
+        generate_statement_list(cur);
+    }
+    else if(cur->value == "statement_exp"){
         if(cur->child[0]->child.size()==1){
             addr1 = generate_exp(cur->child[0]->child[0]);
         }
@@ -618,7 +617,7 @@ Addr generate_statement(TreeNode *cur){
     }
     else if(cur->value == "statement_comp"){
         if(cur->child.size()==1){
-            // cout<<"comp"<<endl;
+            cout<<"comp"<<endl;
             generate_statement_list(cur->child[0]);
         }
     }
@@ -645,14 +644,13 @@ Addr generate_statement(TreeNode *cur){
 
 Addr generate_statement_list(TreeNode *cur) {
     if (cur->child.size() == 2) {
+        cout<<"statement_list->statement_list "<<endl;
         generate_statement_list(cur->child[0]);
         generate_statement(cur->child[1]);
     }
     else{
-        cout<<"statement_list->statement "<<endl;
-        while(cur->child[0]->value == "statement_list")
-           cur = cur->child[0];
-        return generate_statement(cur->child[0]);
+        cout<<"statement_list->statement "<<cur->child[0]->child.size()<<endl;
+        generate_statement(cur->child[0]);
     }
 }
 
