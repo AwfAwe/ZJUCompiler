@@ -5,7 +5,15 @@
 #include <vector>
 #include <map>
 using namespace std;
-
+// #include "symbolTable.h"
+enum ValueType {
+    TypeVoid,
+    TypeInt,
+    TypeArray,
+    TypeChar,
+    TypeFloat
+};
+// extern enum Type;
 extern ifstream ifs;
 extern ofstream ofs;
 // extern ofstream IRofs
@@ -63,7 +71,7 @@ class varEntry {
 
   public:
     string id; //符号标识
-    Type type; //变量类型（对于函数来说，是返回值类型）
+    ValueType type; //变量类型（对于函数来说，是返回值类型）
     int size;  //数组大小
 	int offset; //在内存中的位置
 	int regid;
@@ -71,7 +79,7 @@ class varEntry {
 	bool dirty; //是否寄存器已写
 
     //数组类型声明
-    varEntry(string id, Type type, int size) {
+    varEntry(string id, ValueType type, int size) {
         this->id = id;
         this->type = type;
         this->size = size;
@@ -79,7 +87,7 @@ class varEntry {
 		current_global_offset += size*4;
     }
     //单变量类型
-    varEntry(string id, Type type) {
+    varEntry(string id, ValueType type) {
         this->id = id;
         this->type = type;
         this->size = 0;
@@ -94,30 +102,30 @@ class varEntry {
 // 将替换出去的寄存器中的变量吗名在table中找到对应entry得到其在内存中对应的offset 然后将其存进去
 // 
 
-map<string, string> nameTotype;
+static map<string, string> nameTotype;
 
-string current_reg_variable[12];
+static string current_reg_variable[12];
 // int current_reg_var_value[12];
-int current_reg_variable_times[12];
-bool current_reg_variable_dirty[12];
+static int current_reg_variable_times[12];
+static bool current_reg_variable_dirty[12];
 
-string current_reg_temp[7];
+static string current_reg_temp[7];
 // int current_reg_temp_value[7];
-bool current_reg_temp_busy[7];
+static bool current_reg_temp_busy[7];
 
-string current_float_reg_variable[12];
+static string current_float_reg_variable[12];
 // float current_float_reg_var_value[12];
-bool current_float_reg_variable_dirty[12];
-int current_float_reg_variable_times[12];
+static bool current_float_reg_variable_dirty[12];
+static int current_float_reg_variable_times[12];
 
-string current_float_reg_temp[12];
-bool current_float_reg_temp_busy[12];
+static string current_float_reg_temp[12];
+static bool current_float_reg_temp_busy[12];
 // int current_reg_temp_value[7];
 static int nowtimes;
 struct varTable{
 	map<string, varEntry *> table;
 };
-vector<struct varTable *> varTableStack;
+static vector<struct varTable *> varTableStack;
 
 class varTableFun {
   public:
@@ -128,12 +136,17 @@ class varTableFun {
 
     //插入表项
     bool insert_Entry(varEntry *e) {
-        struct Table *curTable = TableStack[TableStack.size() - 1];
+		if(varTableStack.size() == 0){
+			struct varTable *newTable = new varTable;
+            varTableStack.push_back(newTable);
+		}
+		//   create_table();
+        struct varTable *curTable = varTableStack[varTableStack.size() - 1];
 
         //在当前符号表中查找是否存在与需要插入的项的标识符相同的项
         if (!this->lookup(e->id)) {
             (curTable->table)[e->id] = e;
-            curTable->curEntry = (curTable->table)[e->id];
+            // curTable->varEntry = (curTable->table)[e->id];
             return true;
         } else
             return false;
@@ -141,8 +154,8 @@ class varTableFun {
 
     //在所有符号表中进行查找
     varEntry *lookup(string name) {
-        for (int i = TableStack.size() - 1; i >= 0; i--) {
-            struct varTable *t = TableStack[i];
+        for (int i = varTableStack.size() - 1; i >= 0; i--) {
+            struct varTable *t = varTableStack[i];
             map<string, varEntry *>::iterator e = (t->table).find(name);
             if (e != (t->table).end())
                 return e->second;
@@ -152,8 +165,8 @@ class varTableFun {
 
     //在所有符号表中寻找当前寄存器中的变量 
     varEntry *lookup(string name, int idx) {
-        for (int i = TableStack.size() - 1; i >= 0; i--) {
-            struct varTable *t = TableStack[i];
+        for (int i = varTableStack.size() - 1; i >= 0; i--) {
+            struct varTable *t = varTableStack[i];
             map<string, varEntry *>::iterator e = (t->table).find(name);
             if (e != (t->table).end() && e->second->inReg && e->second->regid==idx)
                 return e->second;
@@ -164,7 +177,7 @@ class varTableFun {
 
     //删除符号表
     void delete_current_table() {
-        struct varTable *curTable = TableStack[TableStack.size() - 1];
+        struct varTable *curTable = varTableStack[varTableStack.size() - 1];
         //在当前符号表中查找是否存在与需要插入的项的标识符相同的项
         struct varTable *t = curTable;
         varTableStack.pop_back();
@@ -181,7 +194,7 @@ class targetCode
 		string argument_reg[8] = {"a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"};
 		
 		string variable_float_reg[12] = {"fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7", "fs8", "fs9", "fs10", "fs11"};
-		string temp_float_reg[12]= {"ft0", "ft1", "ft2", "ft3", "ft4","ft5","ft6","ft7","ft8","ft9","ft10","ft11"}
+		string temp_float_reg[12]= {"ft0", "ft1", "ft2", "ft3", "ft4","ft5","ft6","ft7","ft8","ft9","ft10","ft11"};
 		string argument_float_reg[8] = {"fa0", "fa1", "fa2", "fa3", "fa4", "fa5", "fa6", "fa7"};
 		
 		/* 寄存器分配的思想
@@ -202,56 +215,58 @@ class targetCode
 		
 		*/
 		void writeBack(varEntry *cur){
-			if(cur->type==Int){
+			if(cur->type==TypeInt){
 				ofs << "	sw " + variable_reg[cur->regid] + ", " + to_string(-(cur->offset)) + "(sp)"<< endl;				
-			}else if(cur->type==Float){
-				ofs << "	sw " + variable_float_reg[cur->regid] + ", " + to_string(-(cur->offset)) + "(sp)"<< endl;				
+			}else if(cur->type==TypeFloat){
+				ofs << "    sw " + variable_float_reg[cur->regid] + ", " + to_string(-(cur->offset)) + "(sp)"<< endl;				
 			}
 			cur->dirty = false;
 			cur->inReg = false;
 			cur->regid = 0;
 		}
 
+		void asm_load_imm(string dst, string imm){
+			string regDst = reg_allcocate(dst, true);
+			ofs << "    li " + regDst + ", " + imm << endl;
+			cout << "	 li " + regDst + ", " + imm << endl;
+
+		}
+
 		string reg_allcocate(string value, bool islv){
 			// 两个参数，一个是参数名，一个是判断是否为左值
 			if(value=="zero")return value;
-
+			if(value=="sp") return value;
 			int index, newidx;
 			if(value.find("temp_") != -1 || value.find("imm_") != -1){
 			// 只针对中间代码生成的临时变量或立即数做简单分配
+				int curTimes = 0x7FFFFFFF;
 				if(nameTotype[value] == "int"){
 					for(index = 0, newidx = -1; index < 7; index++) {
 					// 在变量表中查找当前变量
 						if(current_reg_temp[index] == value)
 							break;
-						if(current_reg_temp_busy[index] == false && newidx==-1){
+						if(current_reg_temp_times[index]<curTimes ){
+							curTimes = current_reg_temp_times[index];
 							newidx = index;
 						}
 					}
-					if (index == 7) {
-						current_reg_temp[newidx] = value;
-						current_reg_temp_busy[newidx] = true;
-						return temp_reg[newidx];
-					}
-					current_reg_temp[index] = "";
-					current_reg_temp_busy[index] = false;
+					if (index == 7) index = newidx;
+					current_reg_temp[index] = value;
+					current_reg_temp_times[index] = ++nowtimes;
 					return temp_reg[index]; // 为当前变量分配的寄存器
 				}else if(nameTotype[value] == "float"){
 					for(index = 0, newidx = -1; index < 12; index++) {
 					// 在变量表中查找当前变量
 						if(current_float_reg_temp[index] == value)
 							break;
-						if(current_float_reg_temp_busy[index] == false && newidx==-1){
+						if(current_float_reg_temp_times[index] < curTimes){
+							curTimes = current_reg_temp_times[index];
 							newidx = index;
 						}
 					}
-					if (index == 12) {
-						current_float_reg_temp[newidx] = value;
-						current_float_reg_temp_busy[newidx] = true;
-						return temp_float_reg[newidx];
-					}
-					current_float_reg_temp[index] = "";
-					current_float_reg_temp_busy[index] = false;
+					if (index == 12) index = newidx;
+					current_float_reg_temp[index] = value;
+					current_float_reg_temp_times[index] = ++nowtimes;
 					return temp_float_reg[index]; // 为当前变量分配的寄存器
 				}
 			} else {
@@ -373,439 +388,72 @@ class targetCode
 			ofs << "	syscall" << endl;
 			ofs << "	move $v0, $0" << endl;
 		}
-		
-		void asm_load_imm(string dst, string imm)
+
+		void asm_declaration_variable(string type,string declaration)
 		{
-			ofs << "	li " + reg_allcocate(dst) + ", " + 
-							   imm << endl;
-		}
-		void asm_load_immf(string dst, string imm)
-		{
-			ofs << "	li " + reg_allcocate(dst) + ", " + 
-							   imm << endl;
-		}
-		void asm_move(string dst, string src)
-		{
-			if(function_return_table[last_function_call] && is_last_call) // 如果上一条语句是call，这里的src必须是v0
-			{
-				ofs << "	move " + reg_allcocate(dst) + ", $v0" << endl;
+			varEntry *variable = new varEntry();
+		    ValueType temp;
+			if(type == "INT"){
+			  ValueType temp = ValueType::TypeInt;
+              type = "int";
 			}
-			else
-			{
-				ofs << "	move " + reg_allcocate(dst) + ", " + 
-								 	 reg_allcocate(src) << endl;
+			if(type == "FLOAT"){
+			  ValueType temp = ValueType::TypeFloat;
+              type = "float";
 			}
-			is_last_call = false;
-		}
-		
-		void asm_assign(string op, string dst, string src1, string src2, src_type ty1, src_type ty2){
-			string regS1, regS2, regDst;
-			if(ty1 == imm_float || ty2 == imm_float){
-				nameTotype[dst] = "float";					
-				if(ty1 == ty2){
-					string s1 = "immf_" ;						
-					immediate_count++; // 生成一个唯一的立即数编号，促进立即数周转
-					s1 += to_string(immediate_count);
-
-					nameTotype[s1] = "float";
-
-					asm_load_immf(s1, src1);
-
-					regS1 = reg_allcocate(s1);
-					regDst = reg_allcocate(dst);
-					ofs << "	f"+ op +".s " + regDst + ", " + regS1 + ", " + src2 << endl;	
-					
-				}else if(ty1==var){
-					regS1 = reg_allcocate(src1);
-					regDst = reg_allcocate(dst);					
-					ofs << "	f"+ op +".s " + regDst + ", " + regS1 + ", " + src2 << endl;	
-
-				}else if(ty2==var){
-					regS1 = reg_allcocate(src2);
-					regDst = reg_allcocate(dst);
-					ofs << "	f"+ op +".s " + regDst + ", " + regS1 + ", " + src1 << endl;						
-				}else if(ty1==imm_int){
-					string s1 = "imm_" ;						
-					immediate_count++; // 生成一个唯一的立即数编号，促进立即数周转
-					s1 += to_string(immediate_count);
-					nameTotype[s1] = "float";
-					asm_load_immf(s1, src1);
-					regS1 = reg_allcocate(s1);
-					regDst = reg_allcocate(dst);
-					ofs << "	f"+ op +".s " + regDst + ", " + regS1 + ", " + src2 << endl;	
-
-				}else if(ty2==imm_int){
-					string s1 = "imm_" ;						
-					immediate_count++; // 生成一个唯一的立即数编号，促进立即数周转
-					s1 += to_string(immediate_count);
-					nameTotype[s1] = "float";
-					asm_load_immf(s1, src2);
-					regS1 = reg_allcocate(s1);
-					regDst = reg_allcocate(dst);
-					ofs << "	f"+ op +".s " + regDst + ", " + regS1 + ", " + src1 << endl;						
-				}
-			}else if(ty1 == imm_int || ty2 == imm_int){
-				if(ty1 == ty2){
-					string s1 = "imm_" ;						
-					immediate_count++; // 生成一个唯一的立即数编号，促进立即数周转
-					s1 += to_string(immediate_count);
-					nameTotype[s1] = "int";					
-					asm_load_imm(s1, src1);
-					regS1 = reg_allcocate(s1);
-					regDst = reg_allcocate(dst);					
-					ofs << "	" +op+ regDst + ", " + regS1 + ", " + src2 << endl;	
-				}else if(ty1 == var){
-					regS1 = reg_allcocate(src1);
-					regDst = reg_allcocate(dst);					
-					ofs << "	" +op+ regDst + ", " + regS1 + ", " + src2 << endl;	
-				}else if(ty2 == var){
-					regS1 = reg_allcocate(src2);
-					regDst = reg_allcocate(dst);							
-					ofs << "	" +op+ regDst + ", " + regS1 + ", " + src1 << endl;		
-				}
-			}else{
-				regS1 = reg_allcocate(src1);
-				regS2 = reg_allcocate(src2);
-				regDst = reg_allcocate(dst);				
-				ofs << "	" +op+ regDst + ", " + regS1 + ", " + regS2 << endl;		
+			if(type == "CHAR"){
+			  ValueType temp = ValueType::TypeChar;
+              type = "char";
 			}
-
+			variable->type = temp;
+			variable->id = declaration;
+			varTableFun t = varTableFun();
+			t.insert_Entry(variable);
+			variable->offset = current_global_offset;
+			current_global_offset += 4;
 		}
 
-
-		void asm_assign_add(string dst, string src1, string src2, bool imm1, bool imm2)
+        void asm_declaration_variable_initialize(string type,string declaration,string init)
 		{
-			string s1 = imm1 ? "imm_" : src1;
-			string s2 = imm2 ? "imm_" : src2;
-			if(imm1)
-			{
-				immediate_count++; // 生成一个唯一的立即数编号，促进立即数周转
-				s1 += to_string(immediate_count);
-				asm_load_imm(s1, src1);
+			varEntry *variable = new varEntry();
+			ValueType temp;
+			if(type == "INT"){
+			  ValueType temp = ValueType::TypeInt;
+              type = "int";
 			}
-			if(imm2)
-			{
-				immediate_count++;
-				s2 += to_string(immediate_count);
-				asm_load_imm(s2, src2);
+			if(type == "FLOAT"){
+			  ValueType temp = ValueType::TypeFloat;
+              type = "float";
 			}
-			ofs << "	add " + reg_allcocate(dst) + ", " +
-							    reg_allcocate(s1) + ", " +
-							    reg_allcocate(s2) << endl;
-		}
-		
-		void asm_assign_sub(string dst, string src1, string src2, bool imm1, bool imm2)
-		{
-			string s1 = imm1 ? "imm_" : src1;
-			string s2 = imm2 ? "imm_" : src2;
-			if(imm1)
-			{
-				immediate_count++;
-				s1 += to_string(immediate_count);
-				asm_load_imm(s1, src1);
+			if(type == "CHAR"){
+			  ValueType temp = ValueType::TypeChar;
+              type = "char";
 			}
-			if(imm2)
-			{
-				immediate_count++;
-				s2 += to_string(immediate_count);
-				asm_load_imm(s2, src2);
-			}
-			ofs << "	sub " + reg_allcocate(dst) + ", " +
-							    reg_allcocate(s1) + ", " +
-							    reg_allcocate(s2) << endl;
+			variable->type = temp;
+			variable->id = declaration;
+			varTableFun t = varTableFun();
+			t.insert_Entry(variable);
+			variable->offset = current_global_offset;
+			current_global_offset += 4;
+			string s = "imm_";
+			s += to_string(++immediate_count);
+			nameTotype[s] = type;
+            asm_load_imm(s, init);
+			string regi = reg_allcocate(s, false);
+			   ofs<< "    sw " + regi + ",-" + to_string(current_global_offset) + "(sp)"<<endl;
+			   cout<< "    sw " + regi + ",-" + to_string(current_global_offset) + "(sp)"<<endl;
 		}
 
-		void asm_assign_mul(string dst, string src1, string src2, bool imm1, bool imm2)
-		{
-			string s1 = imm1 ? "imm_" : src1;
-			string s2 = imm2 ? "imm_" : src2;
-			if(imm1)
-			{
-				immediate_count++;
-				s1 += to_string(immediate_count);
-				asm_load_imm(s1, src1);
-			}
-			if(imm2)
-			{
-				immediate_count++;
-				s2 += to_string(immediate_count);
-				asm_load_imm(s2, src2);
-			}
-			ofs << "	mul " + reg_allcocate(dst) + ", " +
-							    reg_allcocate(s1) + ", " +
-							    reg_allcocate(s2) << endl;
-		}
+		void asm_function(string name){
+			varTableFun t = varTableFun();
+			t.create_table();
+			ofs<<name + ":"<<endl;
+			cout<<name + ":"<<endl;
+ 		}
 
-		void asm_assign_div(string dst, string src1, string src2, bool imm1, bool imm2)
-		{
-			string s1 = imm1 ? "imm_" : src1;
-			string s2 = imm2 ? "imm_" : src2;
-			if(imm1)
-			{
-				immediate_count++;
-				s1 += to_string(immediate_count);
-				asm_load_imm(s1, src1);
-			}
-			if(imm2)
-			{
-				immediate_count++;
-				s2 += to_string(immediate_count);
-				asm_load_imm(s2, src2);
-			}
-			ofs << "	div " + reg_allcocate(s1) + ", " +
-							    reg_allcocate(s2) << endl;
-			ofs << "	mflo " + reg_allcocate(dst) << endl;					
-		}
-		
-		void asm_goto_label(string label)
-		{
-			ofs << "	j " + label << endl;
-		}
-
-		void asm_branch_condition(string condition, string label)
-		{
-			//ofs << "	lw $t0, " + get_offset(reg_allcocate(condition)) + "($fp)" << endl;
-			//ofs << "	bne $t0, $zero, " + label << endl;
-			ofs << "	bne " + reg_allcocate(condition) + ", " +
-								"$zero, " + 
-								label << endl;
-		}
-
-		void asm_label(string label)
-		{
-			ofs << label + ":" << endl;
-		}
-
-		void asm_function(string function)
-		{
-			last_function_declaration = function;
-			if(function != "input" && function != "output")
-			{
-				function_return_table[function] = false; // 默认无返回值，除非后面发现有配对的RET记号
-			}
-			ofs << function + ":" << endl;
-			//asm_enter();
-		}
-
-		void asm_function_argument(string argument) // 逆序传递参数
-		{
-			//ofs << "	lw $a0, " + 
-			//			   get_offset(reg_allcocate(argument)) + "($fp)" << endl;
-			//asm_push("a0");
-			//ofs << "	addi $sp, $sp, -4" << endl;
-			//ofs << "	sw $a0, 0($sp)" << endl;
-			//cout << argument_reg_list[argument_count] << endl;
-			ofs << "	move " + argument_reg_list[--argument_count] + ", " + 
-								 reg_allcocate(argument) << endl;
-			last_argument = argument_reg_list[argument_count]; // 用于output函数中
-		}
-
-		void asm_function_call(string function)
-		{
-			is_last_call = true;
-			last_function_call = function;
-			if(function == "input") // input、output不跳转，用伪函数实现
-			{
-				asm_input();
-			}
-			else if(function == "output")
-			{
-				// 因为函数可能嵌套，需要把输出参数强行变换到a0统一处理，最后恢复
-				ofs << "	move $t0, $a0" << endl; // 储存原来的a0
-				ofs << "	move $a0, " + last_argument << endl; 
-				asm_output();
-				ofs << "	move $a0, $t0" << endl; // 还原原来的a0
-				argument_count++;
-			}
-			else
-			{
-				ofs << "	jal " + function << endl;
-			}
-		}
-
-		void asm_function_parameter(string parameter)
-		{
-			ofs << "	move " + reg_allcocate(parameter) + ", " + 
-								 argument_reg_list[argument_count++] << endl;
-		}
-
-		void asm_get_base_address(string dst, string src)
-		{
-			//ofs << "	li $t1, " + get_offset(reg_allcocate(src)) << endl;
-			//ofs << "	add $t0, $fp, $t1" << endl;
-			//ofs << "	sw $t0, " + get_offset(reg_allcocate(dst)) + "($fp)" << endl;
-			ofs << "	la " + reg_allcocate(dst) + ", " +
-							   reg_allcocate(src) << endl;
-		}
-
-		void asm_get_offset_address(string dst, string src, string offset)
-		{
-			//ofs << "	lw $t1, " + get_offset(reg_allcocate(src)) + "($fp)" << endl;
-			//ofs << "	add $t0, $fp, $t1" << endl;
-			//ofs << "	addi $t0, $t0, " + offset << endl;
-			//ofs << "	sw $t0, " + get_offset(reg_allcocate(dst)) + "($fp)" << endl;
-			ofs << "	la " + reg_allcocate(dst) + ", " +
-							   reg_allcocate(src) << endl;
-			ofs << "	addi " + reg_allcocate(dst) + ", " + 
-								 reg_allcocate(dst) + ", " + 
-								 reg_allcocate(offset) << endl;
-		}
-
-		void asm_get_value(string dst, string src)
-		{
-			//ofs << "	lw $t1, " + get_offset(reg_allcocate(src)) + "($fp)" << endl;
-			//ofs << "	lw $t0, 0(t1)" << endl;
-			//ofs << "	sw $t0, " + get_offset(reg_allcocate(dst)) + "($fp)" << endl;
-			ofs << "	lw " + reg_allcocate(dst) + "," + 
-							   get_offset(reg_allcocate(src)) + "($fp)" << endl;
-		}
-
-		void asm_return_void()
-		{
-			//asm_leave();
-			ofs << "	jr $ra" << endl;
-		}
-
-		void asm_return_value(string value)
-		{
-			//ofs << "	lw $v0, " + 
-			//			   get_offset(reg_allcocate(value)) + "($fp)" << endl;
-			function_return_table[last_function_declaration] = true; // 发现有RET记号，更新映射表
-			ofs << "	move $v0, " + reg_allcocate(value) << endl;
-			//asm_leave();
-			ofs << "	jr $ra" << endl;
-		}
-
-		// 暂未完成
-		void asm_declaration(string declaration)
-		{
-			;// nothing but need to allocate stack globally
-		}
-
-		void asm_set_less_equal(string dst, string src1, string src2, bool imm1, bool imm2)
-		{
-			string s1 = imm1 ? "imm_" : src1;
-			string s2 = imm2 ? "imm_" : src2;
-			if(imm1)
-			{
-				immediate_count++;
-				s1 += to_string(immediate_count);
-				asm_load_imm(s1, src1);
-			}
-			if(imm2)
-			{
-				immediate_count++;
-				s2 += to_string(immediate_count);
-				asm_load_imm(s2, src2);
-			}
-			ofs << "	sle " + reg_allcocate(dst) + ", " +
-								reg_allcocate(s1) + ", " +
-								reg_allcocate(s2) << endl;
-		}
-
-		void asm_set_less_than(string dst, string src1, string src2, bool imm1, bool imm2)
-		{
-			string s1 = imm1 ? "imm_" : src1;
-			string s2 = imm2 ? "imm_" : src2;
-			if(imm1)
-			{
-				immediate_count++;
-				s1 += to_string(immediate_count);
-				asm_load_imm(s1, src1);
-			}
-			if(imm2)
-			{
-				immediate_count++;
-				s2 += to_string(immediate_count);
-				asm_load_imm(s2, src2);
-			}
-			ofs << "	slt " + reg_allcocate(dst) + ", " +
-								reg_allcocate(s1) + ", " +
-								reg_allcocate(s2) << endl;
-		}
-
-		void asm_set_greater_than(string dst, string src1, string src2, bool imm1, bool imm2)
-		{
-			string s1 = imm1 ? "imm_" : src1;
-			string s2 = imm2 ? "imm_" : src2;
-			if(imm1)
-			{
-				immediate_count++;
-				s1 += to_string(immediate_count);
-				asm_load_imm(s1, src1);
-			}
-			if(imm2)
-			{
-				immediate_count++;
-				s2 += to_string(immediate_count);
-				asm_load_imm(s2, src2);
-			}
-			ofs << "	sgt " + reg_allcocate(dst) + ", " +
-								reg_allcocate(s1) + ", " +
-								reg_allcocate(s2) << endl;
-		}
-
-		void asm_set_greater_equal(string dst, string src1, string src2, bool imm1, bool imm2)
-		{
-			string s1 = imm1 ? "imm_" : src1;
-			string s2 = imm2 ? "imm_" : src2;
-			if(imm1)
-			{
-				immediate_count++;
-				s1 += to_string(immediate_count);
-				asm_load_imm(s1, src1);
-			}
-			if(imm2)
-			{
-				immediate_count++;
-				s2 += to_string(immediate_count);
-				asm_load_imm(s2, src2);
-			}
-			ofs << "	sge " + reg_allcocate(dst) + ", " +
-								reg_allcocate(s1) + ", " +
-								reg_allcocate(s2) << endl;
-		}
-
-		void asm_set_equal(string dst, string src1, string src2, bool imm1, bool imm2)
-		{
-			string s1 = imm1 ? "imm_" : src1;
-			string s2 = imm2 ? "imm_" : src2;
-			if(imm1)
-			{
-				immediate_count++;
-				s1 += to_string(immediate_count);
-				asm_load_imm(s1, src1);
-			}
-			if(imm2)
-			{
-				immediate_count++;
-				s2 += to_string(immediate_count);
-				asm_load_imm(s2, src2);
-			}
-			ofs << "	seq " + reg_allcocate(dst) + ", " +
-								reg_allcocate(s1) + ", " +
-								reg_allcocate(s2) << endl;
-		}
-
-		void asm_set_not_equal(string dst, string src1, string src2, bool imm1, bool imm2)
-		{
-			string s1 = imm1 ? "imm_" : src1;
-			string s2 = imm2 ? "imm_" : src2;
-			if(imm1)
-			{
-				immediate_count++;
-				s1 += to_string(immediate_count);
-				asm_load_imm(s1, src1);
-			}
-			if(imm2)
-			{
-				immediate_count++;
-				s2 += to_string(immediate_count);
-				asm_load_imm(s2, src2);
-			}
-			ofs << "	sne " + reg_allcocate(dst) + ", " +
-								reg_allcocate(s1) + ", " +
-								reg_allcocate(s2) << endl;
+		void asm_functionend(string name){
+			varTableFun t = varTableFun();
+			t.delete_current_table();
 		}
 		
 		void printTarget()
