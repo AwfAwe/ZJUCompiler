@@ -64,9 +64,26 @@ Addr generate_assign_declarator(TreeNode *cur1,TreeNode *cur2,string type){
     // cout<<cur1->child[0]->child[0]->value<<endl;
     Addr dest = new Addr_(VARIABLEINIT,cur1->child[0]->child[0]->value);
     Addr typedest = new Addr_(VARIABLEINIT,type);
-    Addr valuedest = new Addr_(VARIABLEINIT,cur2->child[0]->child[0]->value);
-    InterCode code(DECVARIABLEINIT,typedest,dest,valuedest);
-    IRCodes.insert(code);
+    if(cur2->value == "initializer"){
+        Addr valuedest = new Addr_(VARIABLEINIT,cur2->child[0]->child[0]->value);
+        InterCode code(DECVARIABLEINIT,typedest,dest,valuedest);
+        IRCodes.insert(code);
+    }
+    else if(cur2->value == "initializer_inputint"){
+        Addr valuedest = new Addr_("INPUTINT");
+        InterCode code(INTINPUT,typedest,dest,valuedest);
+        IRCodes.insert(code);
+    }
+    else if(cur2->value == "initializer_inputfloat"){
+        Addr valuedest = new Addr_("INPUTFLOAT");
+        InterCode code(FLOATINPUT,typedest,dest,valuedest);
+        IRCodes.insert(code);
+    }
+    else if(cur2->value == "initializer_inputchar"){
+        Addr valuedest = new Addr_("INPUTCHAR");
+        InterCode code(CHARINPUT,typedest,dest,valuedest);
+        IRCodes.insert(code);
+    }
 }
 
 Addr generate_val_declarator(string type,TreeNode *cur){
@@ -599,6 +616,35 @@ Addr generate_iter(TreeNode *cur){
 
 }
 
+Addr generate_output(TreeNode *cur){
+    Addr addr1,addr2,addr3;
+    if(cur->value == "output_int"){
+        addr1 = generate_exp(cur->child[0]);
+        InterCode code(INTOUTPUT,addr1);
+        IRCodes.insert(code);
+    }
+    if(cur->value == "output_float"){
+        addr1 = generate_exp(cur->child[0]);
+        InterCode code(FLOATOUTPUT,addr1);
+        IRCodes.insert(code);
+    }
+    if(cur->value == "output_char"){
+        addr1 = generate_exp(cur->child[0]);
+        InterCode code(CHAROUTPUT,addr1);
+        IRCodes.insert(code);
+    }
+    if(cur->value == "output_space"){
+        addr1 = new Addr_("space");
+        InterCode code(SPACEOUTPUT,addr1);
+        IRCodes.insert(code);
+    }
+    if(cur->value == "output_line"){
+        addr1 = new Addr_("line");
+        InterCode code(LINEOUTPUT,addr1);
+        IRCodes.insert(code);
+    }
+
+}
 
 Addr generate_statement(TreeNode *cur){
     Addr addr1,addr2,addr3;
@@ -639,6 +685,9 @@ Addr generate_statement(TreeNode *cur){
     else if(cur->value == "statement_return"){
        addr1 = generate_ret_stmt(cur->child[0]);
     }
+    else if(cur->value == "statement_output"){
+        addr1 = generate_output(cur->child[0]);
+    }
     
 }
 
@@ -673,7 +722,7 @@ void generate_param(TreeNode *cur) {
         IRCodes.insert(code);
     }
     else{ 
-        cout<<"parameter_declaration -> type_specifier declarator PURE_ASSIGN initializer"<<endl;
+        // cout<<"parameter_declaration -> type_specifier declarator PURE_ASSIGN initializer"<<endl;
         // cout<<cur->value<<endl;
         Addr dest;
         Addr valuedest;

@@ -137,6 +137,14 @@ enum OpKind {
 
     // BREAK,
     // CONTINUE,
+    INTINPUT,
+    FLOATINPUT,
+    CHARINPUT,
+    INTOUTPUT,
+    FLOATOUTPUT,
+    CHAROUTPUT,
+    SPACEOUTPUT,
+    LINEOUTPUT
 };
 
 bool operator==(struct InterCode code1, struct InterCode code2);
@@ -605,7 +613,44 @@ class IRCode {
                                                       (node->code.addr2->kind == CONSTANT),
                                                       (node->code.addr3->kind == CONSTANT));
                         break;
-
+                    case INTINPUT:
+                        IRcode = str_addr(node->code.addr1) + " "+
+                                 str_addr(node->code.addr2) + "="
+                                 "inputint()";
+                        break;
+                    case FLOATINPUT:
+                        IRcode = str_addr(node->code.addr1) + " "+
+                                 str_addr(node->code.addr2) + "="
+                                 "inputfloat()";
+                        break;
+                    case CHARINPUT:
+                        IRcode = str_addr(node->code.addr1) + " "+
+                                 str_addr(node->code.addr2) + "="
+                                 "inputchar()";
+                        break;
+                    case INTOUTPUT:
+                        IRcode = "outputint(" + str_addr(node->code.addr1) + 
+                                 ")";
+                        break;
+                    case FLOATOUTPUT:
+                        IRcode = "outputfloat(" + str_addr(node->code.addr1) + 
+                                 ")";
+                        break;
+                    case CHAROUTPUT:
+                        IRcode = "outputchar(" + str_addr(node->code.addr1) + 
+                                 ")";
+                        break;
+                    case SPACEOUTPUT:
+                        IRcode = "outputspace()";
+                        break;
+                    case LINEOUTPUT:
+                        IRcode = "outputline()";
+                        break;
+                    // case INPUTINT:
+                    //     IRcode = str_addr(node->code.addr1) +
+                    //              str_addr(node->code.addr2) + '='
+                    //              "inputint()";
+                    //     break;
                     // case BREAK:
                     //     IRcode = "BREAK";
                     //     break;
