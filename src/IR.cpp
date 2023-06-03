@@ -202,7 +202,12 @@ Addr generate_lv(TreeNode *cur){
     if(cur->child.size()>1){
         a2 = generate_exp(cur->child[1]);
         a1 = generate_exp(cur->child[0]);
-        a3 = new Addr_(a1->name+'['+a2->name+']');
+        if(a2->ty==vart){
+            a3 = new Addr_(ARRAYVAR,a1->name,a2->name);
+        }else if(a2->ty==imm_int){
+            a3 = new Addr_(ARRAYNUM,a1->name,a2->name);
+        }
+
         return a3;
     }
     else{
@@ -416,6 +421,7 @@ Addr generate_exp(TreeNode *cur){
         a1 = new Addr_();
         a2 = generate_exp(cur->child[0]);
         a3 = generate_exp(cur->child[1]);
+
         InterCode code(VISITARRAY, a1, a2, a3);
         IRCodes.insert(code);
         return a1;         

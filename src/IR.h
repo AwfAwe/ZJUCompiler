@@ -13,17 +13,20 @@ extern targetCode targetCodes;
 
 typedef class Addr_ *Addr;
 
-enum AddrKind { LAB, VARIABLE, ARRAY, CONSTANT, STRING, EMPTY, VARIABLEINIT, ARRAYINIT, POINT, OP, BRACEEXP, POSTFIX };
+enum AddrKind { LAB, VARIABLE, ARRAY, ARRAYNUM, ARRAYVAR, CONSTANT, STRING, EMPTY, VARIABLEINIT, ARRAYINIT, POINT, OP, BRACEEXP, POSTFIX };
 
 static bool is_skip = false;
 
 class Addr_ {
     static int temp;
-
     public:
         AddrKind kind;
-        string name; //地址名称
-        int value;   //地址值
+        string name; //地址名称 
+        int value;   //地址值 
+        string idx;  //对于数组，存储其索引值 kind是ARRAYNUM表明用立即数作为下标，若是ARRAYVAR表明用临时变量作为下标
+        float fvalue;
+        char cvalue;
+        src_type ty; //当其是立即数时，立即数的类型
 
         //数组
         Addr_(AddrKind kind, string name, int value) {
@@ -32,19 +35,43 @@ class Addr_ {
             this->value = value;
             // cout<<"type1:"<<kind<<name<<value<<endl;
         }
+        Addr_(AddrKind kind, string name, string idx) {
+            this->kind = kind;
+            this->name = name;
+            this->idx = idx;
+            // cout<<"type1:"<<kind<<name<<value<<endl;
+            ty =  arrayvar;
+        }        
+
         Addr_(string name, int value) {
             this->name = name;
             this->value = value;
             // cout<<"type1:"<<kind<<name<<value<<endl;
+            ty =  imm_int;
         }
+        Addr_(string name, float fvalue) {
+            this->name = name;
+            this->fvalue = fvalue;
+            ty =  imm_float;
+            // cout<<"type1:"<<kind<<name<<value<<endl;
+        }
+        Addr_(string name, char cvalue) {
+            this->name = name;
+            this->cvalue = cvalue;
+            ty =  imm_char;
+            // cout<<"type1:"<<kind<<name<<value<<endl;
+        }
+
         Addr_(string name) {
             this->name = name;
+            ty = vart;
             // cout<<"type1:"<<kind<<name<<value<<endl;
         }
         Addr_(AddrKind kind, string name) {
             this->kind = kind;
             this->name = name;
             this->value = 0;
+            ty = vart;
         }
         Addr_(AddrKind kind, int value) {
             this->kind = kind;
@@ -64,6 +91,7 @@ class Addr_ {
             this->kind = VARIABLE;
             this->name = "temp_" + to_string((this->temp)++);
             this->value = 0;
+            this->ty = vart;
         }
 };
 
@@ -235,30 +263,47 @@ class IRCode {
                 string temp = "";
                 switch (node->code.kind) {
                     case ASSIGNMENT:
-                        if(node->code.addr2->name == "PURE_ASSIGN")
-                          temp = "=";
-                        if(node->code.addr2->name == "ADD_ASSIGN")
-                          temp = "+=";
-                        if(node->code.addr2->name == "SUB_ASSIGN")
-                          temp = "-=";
-                        if(node->code.addr2->name == "MUL_ASSIGN")
-                          temp = "*=";
-                        if(node->code.addr2->name == "DIV_ASSIGN")
-                          temp = "'\'=";
-                        if(node->code.addr2->name == "MOD_ASSIGN")
-                          temp = "%=";
-                        if(node->code.addr2->name == "LEFT_ASSIGN")
-                          temp = "<<=";
-                        if(node->code.addr2->name == "RIGHT_ASSIGN")
-                          temp = ">>=";
-                        if(node->code.addr2->name == "AND_ASSIGN")
-                          temp = "&=";
-                        if(node->code.addr2->name == "XOR_ASSIGN")
-                          temp = "^=";
-                        if(node->code.addr2->name == "OR_ASSIGN")
-                          temp = "|=";
+                        if(node->code.addr2->name == "PURE_ASSIGN"){
+                            temp = "=";
+                            targetCode.asm_assign("add", node->code.addr1->name, node->code.addr3->name, "zero", node->code.addr3->ty, src_type::vart);
+                        }
+                        if(node->code.addr2->name == "ADD_ASSIGN"){
+                            temp = "+=";
+                            targetCode.asm_assign("add", node->code.addr1->name, node->code.addr3->name, node->code.addr1->name, node->code.addr3->ty, src_type::vart);
+                        }
+                        if(node->code.addr2->name == "SUB_ASSIGN"){
+                            temp = "-=";
+                            targetCode.asm_assign("sub", node->code.addr1->name, node->code.addr3->name, node->code.addr1->name, node->code.addr3->ty, src_type::vart);
+                        }
+                        if(node->code.addr2->name == "MUL_ASSIGN"){
+                            temp = "*=";
+                            targetCode.asm_assign("mul", node->code.addr1->name, node->code.addr3->name, node->code.addr1->name, node->code.addr3->ty, src_type::vart);
+                        }
+                        if(node->code.addr2->name == "DIV_ASSIGN"){
+                            temp = "'\'=";
+                            targetCode.asm_assign("div", node->code.addr1->name, node->code.addr3->name, node->code.addr1->name, node->code.addr3->ty, src_type::vart);
+                        }
+                        if(node->code.addr2->name == "MOD_ASSIGN"){
+                            temp = "%=";
+                        }
+                        if(node->code.addr2->name == "LEFT_ASSIGN"){
+                            temp = "<<=";
+                        }
+                        if(node->code.addr2->name == "RIGHT_ASSIGN"){
+                            temp = ">>=";
+                        }
+                        if(node->code.addr2->name == "AND_ASSIGN"){
+                            temp = "&=";
+                        }
+                        if(node->code.addr2->name == "XOR_ASSIGN"){
+                            temp = "^=";
+                        }
+                        if(node->code.addr2->name == "OR_ASSIGN"){
+                            temp = "|=";
+                        }
                         IRcode = node->code.addr1->name + temp + node->code.addr3->name;
                         // targetCode.asm_assign_add();
+
                         break;
                     case ID:
                         IRcode = str_addr(node->code.addr1);
@@ -607,50 +652,13 @@ class IRCode {
                         IRcode = str_addr(node->code.addr1) + " = " +
                                  str_addr(node->code.addr2) + "[" + 
                                  str_addr(node->code.addr3) + "]";
-                        targetCodes.asm_set_not_equal(str_addr(node->code.addr1),
+                        targetCodes.asm_assign(str_addr(node->code.addr1),
                                                       str_addr(node->code.addr2),
                                                       str_addr(node->code.addr3),
                                                       (node->code.addr2->kind == CONSTANT),
                                                       (node->code.addr3->kind == CONSTANT));
                         break;
-                    case INTINPUT:
-                        IRcode = str_addr(node->code.addr1) + " "+
-                                 str_addr(node->code.addr2) + "="
-                                 "inputint()";
-                        break;
-                    case FLOATINPUT:
-                        IRcode = str_addr(node->code.addr1) + " "+
-                                 str_addr(node->code.addr2) + "="
-                                 "inputfloat()";
-                        break;
-                    case CHARINPUT:
-                        IRcode = str_addr(node->code.addr1) + " "+
-                                 str_addr(node->code.addr2) + "="
-                                 "inputchar()";
-                        break;
-                    case INTOUTPUT:
-                        IRcode = "outputint(" + str_addr(node->code.addr1) + 
-                                 ")";
-                        break;
-                    case FLOATOUTPUT:
-                        IRcode = "outputfloat(" + str_addr(node->code.addr1) + 
-                                 ")";
-                        break;
-                    case CHAROUTPUT:
-                        IRcode = "outputchar(" + str_addr(node->code.addr1) + 
-                                 ")";
-                        break;
-                    case SPACEOUTPUT:
-                        IRcode = "outputspace()";
-                        break;
-                    case LINEOUTPUT:
-                        IRcode = "outputline()";
-                        break;
-                    // case INPUTINT:
-                    //     IRcode = str_addr(node->code.addr1) +
-                    //              str_addr(node->code.addr2) + '='
-                    //              "inputint()";
-                    //     break;
+
                     // case BREAK:
                     //     IRcode = "BREAK";
                     //     break;
